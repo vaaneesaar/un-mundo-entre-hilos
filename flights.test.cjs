@@ -111,3 +111,20 @@ test('dense allocations prioritize a destination within the shared cap and retai
   assert(shares.every(row => row.count <= row.route.flightCount));
   assert.deepEqual(FlightData.allocateFocused([...rows].reverse(), 100, focus), { shares, omitted });
 });
+
+test('historical ribbons partition directional routes and preserve exact totals under filtering', () => {
+  const data = FlightData.toLoomData(FlightData.getDemo(FlightData.days[0], 'high'));
+  for (const route of data.routes) route.info.status = 'observed';
+  const quality = loom.qualityFor(1000);
+  const bands = loom.buildFibers(data, quality).weft;
+  const total = fibers => fibers.reduce((sum, fiber) => sum + fiber.corridor.flightCount, 0);
+  assert.equal(total(bands), data.routes.reduce((sum, route) => sum + route.flights, 0));
+  assert.equal(new Set(bands.flatMap(fiber => fiber.corridor.routes.map(route => route.id))).size, data.routes.length);
+  const reversed = loom.buildFibers({ ...data, routes: [...data.routes].reverse() }, quality).weft;
+  assert.equal(JSON.stringify(reversed), JSON.stringify(bands));
+  const focus = new Set([data.routes[0].id]);
+  const highlighted = loom.buildFibers(data, quality, null, focus, 'highlight').weft;
+  assert.equal(total(highlighted), total(bands));
+  assert.equal(total(highlighted.filter(fiber => fiber.corridor.matched)), data.routes[0].flights);
+  assert.equal(total(loom.buildFibers(data, quality, null, focus, 'isolate').weft), data.routes[0].flights);
+});

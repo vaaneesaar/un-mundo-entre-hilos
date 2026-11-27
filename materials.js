@@ -14,6 +14,15 @@ const LoomMaterials = (() => {
   function profile(kind = 'cotton', radius, strength = .5, lod = 1) {
     const part = (side, depth, width, shade, turns = 0, phase = 0) =>
       ({ side, depth, radius: width, shade, turns, phase });
+    if (kind === 'gauze') {
+      const width = .13 + .14 * strength;
+      const parts = [{ ...part(0, 0, width, 1), gauze: true }];
+      for (const edge of [-1, 1]) {
+        parts.push({ ...part(width * edge, .008, radius * .58, .90), code: 1, hem: true });
+        if (lod >= .8) parts.push({ ...part(width * edge * .88, .012, radius * .34, 1.06), code: 1, hem: true });
+      }
+      return { kind, code: 5, steps: 76, parts };
+    }
     if (kind === 'braid') {
       const turns = lod < .8 ? 8 : 12;
       const plies = [0, 1, 2].map(i =>
@@ -40,6 +49,7 @@ const LoomMaterials = (() => {
   }
 
   function offset(part, t) {
+    if (part.hem) return [part.side, part.depth];
     const taper = Math.min(1, Math.sin(t * Math.PI) * 4.5);
     const knot = part.gathering === undefined ? 0 : Math.exp(-((t - .54) ** 2) / .014) * part.gathering;
     const angle = (t + knot * .035 * Math.sin((t - .54) * 8)) * part.turns * tau + part.phase;

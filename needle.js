@@ -65,13 +65,25 @@ const TextileNeedle = (() => {
       if (selected?.id !== fiber.id || phase !== nextPhase) {
         const fields = name => card.querySelector(`[data-thread-${name}]`);
         const route = fiber.flightInfo;
+        const corridor = fiber.corridor;
         fields('label').textContent = route?.status === 'demo' ? 'Datos de demostración' : 'Datos del vuelo';
-        fields('type').textContent = route ? 'Ruta seleccionada'
+        fields('type').textContent = corridor ? `Banda ${corridor.lane + 1} · ${FlightData.countFormat.format(corridor.flightCount)} vuelos` : route ? 'Ruta seleccionada'
           : fiber.system === 'support' ? 'Puntada estructural del bordado. No representa vuelos'
           : 'Hilo estructural del telar. Forma parte de la urdimbre y no representa vuelos';
         fields('symbol').hidden = !fiber.figure;
-        fields('route').hidden = !route;
-        if (route) {
+        fields('route').hidden = !route && !corridor;
+        if (corridor) {
+          const format = count => FlightData.countFormat.format(count);
+          const { info } = corridor.routes[0];
+          const examples = corridor.routes.slice(0, 3).map(item =>
+            `${item.info.origin?.code ?? item.from} → ${item.info.destination?.code ?? item.to} · ${format(item.flights)}`);
+          fields('origin').textContent = `${format(corridor.routes.length)} rutas direccionales`;
+          fields('destination').textContent = `Rutas con más vuelos · ${examples.join(' / ')}`;
+          fields('date').textContent = info.periodLabel ?? `${FlightData.dateFormat.format(new Date(info.periodStart))} UTC`;
+          fields('count').textContent = 'Agrupación textil de rutas observadas';
+          fields('distance').textContent = '';
+          fields('source').textContent = `Fuente · ${info.sourceName ?? info.sourceId}`;
+        } else if (route) {
           const place = airport => airport ? `${airport.city} (${airport.code})` : 'Sin información';
           const format = count => FlightData.countFormat.format(count);
           fields('origin').textContent = `Origen · ${place(route.origin)}`;

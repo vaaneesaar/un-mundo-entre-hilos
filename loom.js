@@ -42,7 +42,7 @@ const TextileLoom = (() => {
       return {
         id: 'urdimbre-' + index, system: 'warp', group: 'urdimbre',
         phase: random() * tau, color: colors[index % colors.length],
-        radius: .0105 + random() * .0065, tension: .56 + random() * .26, steps: 52,
+        radius: .0085 + random() * .0050, tension: .56 + random() * .26, steps: 52,
         sample(t) {
           const y = (t - .5) * 4.88;
           return layout([x, y, depthAt(x, y) + depth]);
@@ -119,11 +119,54 @@ const TextileLoom = (() => {
     return { fibers, omitted: allocation.omitted.length };
   }
 
-  function buildFibers(data, quality, embroidered = null, focus) {
+  const bandColors = ['#56CFFF', '#AF9AFF', '#F876AF', '#98C9FF', '#9866EA', '#B9B7FC', '#42B5ED', '#DE83CD'];
+
+  function historicalBands(routes, layout, focus, mode) {
+    const groups = new Map();
+    const split = mode !== 'all';
+    for (const route of routes) {
+      if (!route.flights) continue;
+      // The two directional airport IDs form a stable, data-independent visual partition.
+      const lane = FlightData.hash(route.id) >>> 29;
+      const matched = !split || Boolean(focus?.has(route.id));
+      if (!matched && mode === 'isolate') continue;
+      const id = `corredor-${lane + 1}${matched ? '' : '-contexto'}`;
+      if (!groups.has(id)) groups.set(id, { id, lane, matched, flightCount: 0, routes: [] });
+      const group = groups.get(id);
+      group.routes.push(route);
+      group.flightCount += route.flights;
+    }
+    return [...groups.values()].sort((a, b) => a.id.localeCompare(b.id)).map(group => {
+      const { lane, id, matched, flightCount, routes } = group;
+      routes.sort((a, b) => b.flights - a.flights || a.id.localeCompare(b.id));
+      const strength = Math.min(1, Math.log1p(flightCount / 20) / Math.log1p(2400));
+      const direction = lane % 2 ? -1 : 1;
+      const phase = lane * 1.92;
+      const offset = matched ? 0 : -.105;
+      return {
+        id, group: id, system: 'weft', corridor: { lane, matched, flightCount, routes }, material: 'gauze',
+        phase, tension: strength, radius: .023, strength, steps: 76, color: bandColors[lane],
+        sample(t) {
+          const wave = Math.sin(t * Math.PI * (1.65 + lane % 3 * .29) + phase);
+          const x = -4.79 + lane % 3 * .14 + (9.58 - lane % 4 * .12) * t;
+          const y = 1.64 - lane * .46 + wave * (.22 + lane % 3 * .065)
+            + .19 * Math.sin(t * Math.PI) * direction + offset;
+          const z = .15 + direction * .16 + .22 * Math.cos(t * Math.PI * 2 + phase)
+            + .44 * strength * Math.sin(t * Math.PI) + (matched ? .10 : -.22);
+          return layout([x, y, z]);
+        }
+      };
+    });
+  }
+
+  function buildFibers(data, quality, embroidered = null, focus, mode = 'all') {
     const layout = ([x, y, z]) => quality.portrait
       ? [x * .45 - y * .22, y * 1.04 + x * .32, z * .9]
       : [x, y, z];
     const warp = makeWarp(data, quality, layout);
+    if (!embroidered && data.routes.length && data.routes[0].info && data.routes[0].info.status !== 'demo') {
+      return { warp: warp.fibers, weft: historicalBands(data.routes, layout, focus, mode), omitted: 0 };
+    }
     const { fibers: weft, omitted } = makeWeft(data, quality, layout, warp, focus);
     if (!embroidered) return { warp: warp.fibers, weft, omitted };
     const related = weft.filter(fiber => embroidered.routeIds.has(fiber.group));
@@ -185,20 +228,30 @@ const TextileLoom = (() => {
         const oldCenter = previousFiber?.sample(t) ?? centers[i];
         const delta = subtract(oldCenter, centers[i]);
         const tangent = normalize(subtract(centers[Math.min(steps, i + 1)], centers[Math.max(0, i - 1)]));
-        const across = normalize(cross(tangent, [0, 0, 1]));
+        const horizontal = normalize(cross(tangent, [0, 0, 1]));
+        const perpendicular = cross(tangent, horizontal);
+        const roll = fiber.corridor ? .58 * Math.sin(t * tau * 1.06 + fiber.phase) : 0;
+        const across = horizontal.map((n, k) => n * Math.cos(roll) + perpendicular[k] * Math.sin(roll));
         const normal = cross(tangent, across);
+        const widthAt = fiber.corridor ? .74 + .25 * Math.sin(t * Math.PI) + .11 * Math.sin(t * tau * 2 + fiber.phase) : 1;
         const texture = .96 + .07 * Math.sin(t * 74 + fiber.phase) + .05 * Math.sin(t * 38);
         for (const [partIndex, part] of surface.parts.entries()) {
           const [sideOffset, depthOffset] = LoomMaterials.offset(part, t);
-          const radius = part.radius * texture;
+          const radius = part.radius * (part.gauze ? 1 : texture);
           for (let j = 0; j <= sides; j++) {
             const u = j / sides;
             const angle = u * tau;
             const c = Math.cos(angle), s = Math.sin(angle);
-            const surfaceNormal = across.map((n, k) => n * c + normal[k] * s);
-            const point = centers[i].map((n, k) => n + radius * surfaceNormal[k] + across[k] * sideOffset + normal[k] * depthOffset);
+            const edge = u * 2 - 1;
+            const surfaceNormal = part.gauze
+              ? normalize(normal.map((n, k) => -n + across[k] * edge * .42))
+              : across.map((n, k) => n * c + normal[k] * s);
+            const acrossDistance = (sideOffset + (part.gauze ? radius * edge : 0)) * widthAt;
+            const depth = depthOffset + (part.gauze ? (1 - edge ** 2) * radius * .13 : 0);
+            const point = centers[i].map((n, k) =>
+              n + (part.gauze ? 0 : radius * surfaceNormal[k]) + across[k] * acrossDistance + normal[k] * depth);
             vertices.set([...point, ...surfaceNormal, ...colors[partIndex],
-              t, u, basePhase, delay, direction, fiber.tension, ...delta, Number(retired)], cursor);
+              t, u, part.code === undefined ? basePhase : fiber.phase % tau + part.code * 8, delay, direction, fiber.tension, ...delta, Number(retired)], cursor);
             cursor += stride;
           }
         }
@@ -229,7 +282,7 @@ const TextileLoom = (() => {
     let left = Infinity, right = -Infinity, bottom = Infinity, top = -Infinity;
     for (const fiber of mesh.ranges.values()) {
       if (fiber.retired) continue;
-      const margin = fiber.material === 'mesh' || fiber.material === 'band' ? .53 : fiber.radius * 2.7 + .075;
+      const margin = fiber.material === 'mesh' || fiber.material === 'band' || fiber.material === 'gauze' ? .53 : fiber.radius * 2.7 + .075;
       for (const [x, y, z] of fiber.centers) {
         const cameraX = x + z * tilt;
         const cameraY = y - z * .28;
@@ -261,7 +314,7 @@ const TextileLoom = (() => {
     varying vec3 vNormal, vColor;
     varying vec2 vYarn, vCode;
     varying float vHighlight, vRetired, vWarp, vEdited;
-    varying float vDepth, vPhase, vEntry;
+    varying float vDepth, vPhase, vEntry, vTension;
     float pullInfluence(float t, float anchor, float magnitude) {
       float radius = min(.48, .23 + magnitude * .09);
       float edge = t < anchor ? anchor : 1.0 - anchor;
@@ -313,6 +366,7 @@ const TextileLoom = (() => {
       vYarn = yarn;
       vDepth = camera.z;
       vPhase = phase;
+      vTension = tension;
       vEntry = threaded < .5 ? 1.0 : age;
     }
   `;
@@ -326,7 +380,7 @@ const TextileLoom = (() => {
     varying vec3 vNormal, vColor;
     varying vec2 vYarn, vCode;
     varying float vHighlight, vRetired, vWarp, vEdited;
-    varying float vDepth, vPhase, vEntry;
+    varying float vDepth, vPhase, vEntry, vTension;
     void main() {
       float coverage = smoothstep(-.045, .115, vEntry);
       coverage *= mix(1.0, 1.0 - morph, vRetired);
@@ -349,11 +403,25 @@ const TextileLoom = (() => {
       vec3 n = normalize(vNormal);
       float kind = floor(vPhase / 8.0);
       float threadPhase = mod(vPhase, 8.0);
+      if (abs(kind - 5.0) < .25) {
+        // A flattened shell carries the woven surface. Its UVs, picking and pull use the same buffer.
+        float u = vYarn.y;
+        float warpCount = mix(7.0, 17.0, vTension);
+        float across = u * warpCount + .11 * sin(vYarn.x * 40.0 + threadPhase);
+        float along = vYarn.x * 112.0 + .17 * sin(u * 4.2 + threadPhase);
+        float longitudinal = 1.0 - smoothstep(.08, .22, abs(fract(across) - .5));
+        float transverse = 1.0 - smoothstep(.06, .24, abs(fract(along) - .5));
+        float warpThread = longitudinal * (.83 + .17 * cos(along * 3.14159));
+        float weftThread = transverse * (.82 + .18 * sin(across * 3.14159));
+        float cloth = max(warpThread, weftThread);
+        coverage *= .065 + .87 * cloth;
+        if (coverage < .026) discard;
+      }
       float keyLight = max(0.0, dot(n, normalize(vec3(-.44, .70, .63))));
       float warm = max(0.0, dot(n, normalize(vec3(.85, .13, .52))));
       float satin = step(.5, kind) * (1.0 - step(1.5, kind));
       float bundled = step(1.5, kind);
-      float open = step(2.5, kind) * (1.0 - step(3.5, kind));
+      float open = step(2.5, kind) * (1.0 - step(3.5, kind)) + (1.0 - step(.25, abs(kind - 5.0)));
       float expression = expressionFinish.x * (1.0 - vWarp);
       satin = clamp(satin + expression * expressionFinish.y, 0.0, 1.0);
       float sheen = pow(max(0.0, dot(n, normalize(vec3(-.24, .28, .93)))), mix(7.0, 18.0, satin));
@@ -472,7 +540,7 @@ const TextileLoom = (() => {
         if (!embroidered.routeIds.size || layer.mode === 'isolate') return 0;
         return layer.mode === 'all' ? .24 : .09;
       }
-      return LoomDestinations.layerOpacity(layer.mode, layer.routeIds.has(fiber.group), fiber.system === 'warp');
+      return LoomDestinations.layerOpacity(layer.mode, fiber.corridor?.matched ?? layer.routeIds.has(fiber.group), fiber.system === 'warp');
     }
 
     function easedLayer() {
@@ -493,7 +561,7 @@ const TextileLoom = (() => {
         }
         const visible = embroidered
           ? target > 0 && Boolean(fiber.figure) && fiber.pickable !== false
-          : LoomDestinations.layerPickable(layer.mode, layer.routeIds.has(fiber.group), fiber.system === 'warp');
+          : LoomDestinations.layerPickable(layer.mode, fiber.corridor?.matched ?? layer.routeIds.has(fiber.group), fiber.system === 'warp');
         pixels.set([start, target, visible && !fiber.retired && !fiber.frameRail ? 255 : 0, fiber.figure ? 255 : 0], i);
       }
       gl.bindTexture(gl.TEXTURE_2D, layerTexture);
@@ -603,7 +671,7 @@ const TextileLoom = (() => {
       const resolve = candidate => ({ ...candidate, fiber: mesh.byCode[candidate.code] });
       const candidates = hit.candidates.filter(c => mesh.byCode[c.code]).map(resolve);
       const focused = layer.mode === 'highlight' && candidates.find(candidate =>
-        candidate.distance <= Math.min(tolerance, hit.main.distance + 2) && layer.routeIds.has(candidate.fiber.group));
+        candidate.distance <= Math.min(tolerance, hit.main.distance + 2) && (candidate.fiber.corridor?.matched ?? layer.routeIds.has(candidate.fiber.group)));
       return { main: focused || resolve(hit.main), candidates };
     }
 
@@ -627,7 +695,7 @@ const TextileLoom = (() => {
           });
         }
       }
-      const fibers = buildFibers(data, quality, embroidered, layer.routeIds);
+      const fibers = buildFibers(data, quality, embroidered, layer.routeIds, layer.mode);
       mesh = meshFibers(fibers, quality, settled, prior);
       bounds = projectedBounds(mesh, quality.portrait);
       morph = prior.size ? 0 : 1;
@@ -850,8 +918,9 @@ const TextileLoom = (() => {
         const sameFocus = layer.routeIds.size === routeIds.size && [...routeIds].every(id => layer.routeIds.has(id));
         if (layer.mode === mode && sameFocus) return;
         needle.clear();
+        const changedMode = layer.mode !== mode;
         layer = { mode, routeIds };
-        if (!sameFocus && data.routes.length > 10) refresh();
+        if ((!sameFocus && data.routes.length > 10) || (changedMode && data.routes[0]?.info?.status !== 'demo')) refresh();
         layerDirty = true;
         frameReady = false;
         schedule();

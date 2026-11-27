@@ -907,7 +907,7 @@ body.intro-view { min-block-size: 100svh; display: grid; grid-template-rows: aut
     linear-gradient(150deg, #0a1028, #151834 68%, #0b142b);
 }
 @media (min-width: 900px) {
-  .loom-stage:not(.is-comparing) .loom-art canvas { filter: drop-shadow(0 0 4px #b39af75c); }
+  .loom-stage:not(.is-comparing) .loom-art canvas { filter: drop-shadow(0 0 2px #b39af748); }
 }
 #telar[data-emotion="nostalgia"] .loom-art { --gallery-light: #6e568e65; --gallery-fill: #35447043; }
 #telar[data-emotion="joy"] .loom-art { --gallery-light: #b3665970; --gallery-fill: #8a4a856d; }
