@@ -291,9 +291,11 @@ function initIntro(screen, restart) {
   const begin = screen.querySelector('#begin');
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
   let transition;
+  const stopHandGesture = initHandGesture(screen, () => begin.click());
 
   begin.addEventListener('click', (event) => {
     if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || transition) return;
+    stopHandGesture();
     restart();
     if (reducedMotion.matches) return;
     event.preventDefault();
@@ -336,6 +338,7 @@ function initIntro(screen, restart) {
   });
 
   return function resetIntro() {
+    stopHandGesture();
     transition?.cancel();
     transition = undefined;
     screen.classList.remove('intro-leaving');

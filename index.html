@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#101B35">
   <title>Un mundo entre hilos</title>
-  <link rel="stylesheet" href="styles.css?v=ambientes">
+  <link rel="stylesheet" href="styles.css?v=gesto">
   <script src="flights.js?v=international" defer></script>
   <script src="destinations.js?v=country-filter" defer></script>
   <script src="materials.js?v=velo-textil" defer></script>
@@ -20,7 +20,8 @@
   <script src="travel-surveys.js?v=escenarios-hipoteticos" defer></script>
   <script src="scenarios.js?v=pulso-textil" defer></script>
   <script src="loom-audio.js?v=ambientes" defer></script>
-  <script src="script.js?v=ambientes" defer></script>
+  <script src="hand-gesture.js?v=gesto" defer></script>
+  <script src="script.js?v=gesto" defer></script>
 </head>
 <body>
   <header class="site-header">
@@ -41,7 +42,15 @@
         <h1 id="intro-title" tabindex="-1">Un mundo<br> <em>entre hilos</em></h1>
         <p class="lead">Todo vínculo comienza con un movimiento.</p>
         <p>Los vuelos observados se convierten en hilos. Explora un lugar y una fecha para descubrir cómo sus conexiones forman un tejido compartido.</p>
-        <a class="button primary" id="begin" href="#telar">Comenzar a tejer</a>
+        <div class="intro-start">
+          <a class="button primary" id="begin" href="#telar">Comenzar a tejer</a>
+          <button type="button" class="hand-start" aria-controls="hand-camera" aria-expanded="false">Abrir con la mano</button>
+        </div>
+        <section class="hand-camera" id="hand-camera" popover aria-label="Abrir con la mano">
+          <p role="status">Abre la mano frente a la cámara.</p>
+          <video playsinline muted autoplay hidden aria-hidden="true"></video>
+          <button type="button" class="button secondary">Cancelar</button>
+        </section>
       </div>
       <button class="intro-thread" type="button" aria-label="Deslizar el primer hilo para comenzar" title="Desliza el hilo para comenzar"></button>
       <p class="intro-note">El mundo como un telar de vínculos</p>

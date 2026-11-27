@@ -1226,3 +1226,35 @@ body:has(#cierre:not([hidden])) .method-footer summary { font-size: .75rem; }
 #loom-audio-control:not([data-enabled]) .audio-waves,
 #loom-audio-control[data-enabled] .audio-muted { display: none; }
 .screen-audio { position: absolute; z-index: 4; inset: .35rem .35rem auto auto; }
+
+.intro-start { position: relative; }
+.hand-start {
+  position: absolute;
+  top: calc(100% + .35rem);
+  left: 50%;
+  transform: translateX(-50%);
+  background: #151a33;
+  border: 1px solid var(--line);
+  border-radius: 2rem;
+  padding: .35rem .8rem;
+  color: var(--ice);
+  font: inherit;
+  font-size: .78rem;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.hand-start:hover { background: #302643; }
+.hand-camera {
+  width: min(19rem, calc(100% - 2rem));
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  background: #151a33;
+  padding: 1rem;
+  color: var(--ice);
+  text-align: center;
+}
+.hand-camera video {
+  width: 100%;
+  border-radius: .5rem;
+  transform: scaleX(-1);
+}
