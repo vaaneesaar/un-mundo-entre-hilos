@@ -725,3 +725,62 @@ body.intro-view { min-block-size: 100svh; display: grid; grid-template-rows: aut
   background: linear-gradient(45deg, transparent 50%, var(--sky) 50%) right 13px center / 4px 4px no-repeat,
     linear-gradient(135deg, var(--sky) 50%, transparent 50%) right 9px center / 4px 4px no-repeat, var(--deep);
 }
+
+/* The artwork keeps its existing frame. Only the toolbar and the data rail change. */
+.loom-filter-bar {
+  display: grid;
+  grid-template-columns: minmax(12rem, 1.65fr) minmax(8.5rem, 1fr) minmax(8.8rem, 1fr)
+    minmax(5.5rem, .7fr) minmax(9rem, 1.12fr) max-content max-content max-content;
+  grid-template-areas: "search place date period view compare emotion settings";
+  column-gap: clamp(.4rem, .75vw, .75rem);
+}
+.loom-filter-bar .destination-search { grid-area: search; display: block; }
+.loom-filter-bar #place-toggle { grid-area: place; }
+.loom-filter-bar .loom-date-field { grid-area: date; }
+.loom-filter-bar .period-control { grid-area: period; }
+.loom-filter-bar #filter-visualization { grid-area: view; }
+.loom-filter-bar .compare-toggle { grid-area: compare; }
+.loom-filter-bar #emotion-toggle { grid-area: emotion; }
+.loom-filter-bar .loom-more { grid-area: settings; }
+.loom-filter-bar #period-hour-field { grid-area: 2 / 1 / auto / span 2; }
+.loom-filter-bar > .button {
+  white-space: nowrap; min-height: 44px; padding: .35rem .68rem;
+  font-size: .8rem; color: var(--ice); background: #101b35e8;
+}
+.loom-filter-bar :is(.period-control, #filter-visualization) select {
+  appearance: none; height: 44px; padding-inline: .65rem 1.55rem;
+  background: linear-gradient(45deg, transparent 50%, var(--sky) 50%) right 13px center / 4px 4px no-repeat,
+    linear-gradient(135deg, var(--sky) 50%, transparent 50%) right 9px center / 4px 4px no-repeat, var(--deep);
+}
+.loom-filter-bar #demo-date { width: 100%; }
+.loom-filter-bar #destination-options { right: auto; width: min(26rem, calc(100vw - 2rem)); min-width: min(100%, calc(100vw - 2rem)); }
+.loom-filter-bar .destination-field button { flex-basis: 34px; }
+.loom-metric #visualization-note { margin-block: .5rem .25rem; color: var(--muted); font-size: .73rem; }
+.destination-airports { margin-block: .35rem; border-top: 1px solid var(--line); }
+.destination-airports summary { display: list-item; min-height: 0; padding-block: .45rem; font-size: .75rem; color: var(--sky); }
+.destination-airports ul { max-height: min(10rem, 23dvh); overflow: auto; overscroll-behavior: contain; margin: 0; padding: .25rem .4rem .35rem 1.1rem; }
+.destination-airports li { margin-block: .2rem; overflow-wrap: anywhere; font-size: .75rem; }
+@media (max-width: 1120px) {
+  .loom-filter-bar {
+    grid-template-columns: minmax(11rem, 1.35fr) minmax(8rem, 1fr) minmax(8rem, 1fr) minmax(6.5rem, .8fr);
+    grid-template-areas: "search place date period" "view compare emotion settings";
+  }
+  .loom-filter-bar #period-hour-field { grid-area: 3 / 1 / auto / span 2; }
+}
+@media (max-width: 620px) {
+  .loom-filter-bar {
+    grid-template-columns: repeat(12, minmax(0, 1fr)); gap: .32rem .3rem;
+    grid-template-areas:
+      "search search search search search search search search place place place place"
+      "date date date date period period period view view view view view"
+      "compare compare compare compare emotion emotion emotion emotion settings settings settings settings";
+  }
+  .loom-filter-bar #period-hour-field { grid-area: 4 / 1 / auto / span 6; }
+  .loom-filter-bar .loom-filter > span {
+    position: static; width: auto; height: auto; overflow: visible; clip-path: none;
+  }
+  .loom-filter-bar .loom-date-field > span { white-space: normal; }
+  .loom-filter-bar #demo-date { padding-inline: .42rem; gap: .2rem; }
+  .loom-filter-bar > .button { padding-inline: .32rem; }
+  .loom-filter-bar .compare-toggle[aria-pressed="true"] { white-space: normal; line-height: 1.1; }
+}

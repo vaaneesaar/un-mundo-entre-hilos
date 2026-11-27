@@ -5,19 +5,19 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#101B35">
   <title>Un mundo entre hilos</title>
-  <link rel="stylesheet" href="styles.css?v=layout962">
+  <link rel="stylesheet" href="styles.css?v=toolbar963b">
   <script src="flights.js?v=international" defer></script>
   <script src="destinations.js?v=country-filter" defer></script>
   <script src="materials.js" defer></script>
-  <script src="embroidery.js?v=layout962" defer></script>
-  <script src="needle.js?v=layout962" defer></script>
-  <script src="interpretations.js?v=layout962" defer></script>
+  <script src="embroidery.js?v=toolbar963b" defer></script>
+  <script src="needle.js?v=toolbar963b" defer></script>
+  <script src="interpretations.js?v=toolbar963b" defer></script>
   <script src="loom.js?v=international" defer></script>
-  <script src="calendar.js?v=layout962" defer></script>
+  <script src="calendar.js?v=toolbar963b" defer></script>
   <script src="temporal.js" defer></script>
-  <script src="providers.js?v=layout962" defer></script>
+  <script src="providers.js?v=toolbar963b" defer></script>
   <script src="historical.js" defer></script>
-  <script src="script.js?v=layout962" defer></script>
+  <script src="script.js?v=toolbar963b" defer></script>
 </head>
 <body>
   <header class="site-header">
@@ -58,10 +58,10 @@
               placeholder="País, ciudad o aeropuerto" enterkeyhint="search">
             <button type="button" data-destination-clear aria-label="Borrar búsqueda" hidden>×</button>
           </div>
-          <button class="button secondary place-toggle" id="place-toggle" type="button" popovertarget="place-panel" aria-controls="place-panel" aria-expanded="false">País y sentido</button>
           <ul id="destination-options" role="listbox" aria-label="Sugerencias de destinos" hidden></ul>
           <p class="destination-search-status" role="status"></p>
         </div>
+        <button class="button secondary place-toggle" id="place-toggle" type="button" popovertarget="place-panel" aria-controls="place-panel" aria-expanded="false">País y sentido</button>
         <div class="loom-date-field">
           <span id="demo-date-label">Fecha de demostración (UTC)</span>
           <button class="calendar-trigger" id="demo-date" type="button" popovertarget="demo-calendar"
@@ -96,7 +96,13 @@
           </select>
         </label>
         <label class="loom-filter" id="period-hour-field" hidden><span>Hora A (UTC)</span><select id="period-hour"></select></label>
-        <div class="toolbar-actions">
+        <label class="loom-filter" id="filter-visualization" for="loom-visualization">
+          <span>Visualización</span>
+          <select id="loom-visualization" aria-describedby="visualization-note">
+            <option value="connections">Conexiones</option>
+            <option value="figure" disabled>Figura bordada</option>
+          </select>
+        </label>
         <button class="button secondary compare-toggle" id="compare-toggle" type="button" aria-pressed="false" aria-controls="loom-comparison">Comparar</button>
         <button class="button secondary" id="emotion-toggle" type="button" popovertarget="emotion-panel" aria-controls="emotion-panel" aria-expanded="false">Emociones</button>
         <button class="button secondary loom-more" id="loom-more" type="button" popovertarget="loom-controls"
@@ -106,7 +112,6 @@
           </svg>
           Ajustes
         </button>
-        </div>
       </div>
       <div class="toolbar-popover" id="place-panel" popover="auto" aria-label="País y tipo de conexión">
         <label class="loom-filter country-filter"><span>País</span>
@@ -130,15 +135,6 @@
             popovertarget="loom-controls" popovertargetaction="hide">Cerrar</button>
         </div>
         <div class="loom-filter-content">
-        <div class="loom-main-modes" id="loom-main-modes">
-          <label class="loom-filter" id="filter-visualization" for="loom-visualization">
-            <span>Visualización</span>
-            <select id="loom-visualization" aria-describedby="visualization-note" disabled>
-              <option value="connections">Conexiones</option><option value="figure" disabled>Figura bordada</option>
-            </select>
-          </label>
-        </div>
-
           <label class="advanced-origin">Cruzar con país de origen <select id="flight-origin"><option value="">Todos los países</option></select></label>
           <div class="destination-layers">
         <label class="loom-filter"><span>Visibilidad del tejido</span>
@@ -187,7 +183,7 @@
             <label for="flight-import">Importar archivo JSON autorizado</label>
             <input id="flight-import" type="file" accept=".json,application/json" aria-describedby="flight-source-status">
             <p id="flight-source-status" role="status"></p>
-            <div id="flight-provenance"></div>
+
           </fieldset>
         </div>
       </aside>
@@ -253,7 +249,10 @@
             <p id="destination-period"></p>
             <p class="destination-tally" id="destination-count"></p>
             <p id="destination-coverage"></p>
-            <p id="destination-airports"></p>
+            <details class="destination-airports" id="destination-airports-disclosure" hidden>
+              <summary>Ver aeropuertos disponibles</summary>
+              <ul id="destination-airports" tabindex="0" aria-label="Aeropuertos disponibles"></ul>
+            </details>
             <label class="loom-filter" id="country-places-field" hidden>Ciudad o aeropuerto
               <select id="country-places"></select>
             </label>
@@ -261,6 +260,7 @@
             <p id="embroidery-description-compact" hidden></p>
           </div>
         </details>
+          <p id="visualization-note">Selecciona un país para descubrir su figura bordada.</p>
           <small id="emotion-disclosure" role="status" hidden></small>
         </div>
         <div class="loom-art" id="loom-art-a">
@@ -290,7 +290,6 @@
         <a class="button secondary loom-next" href="#cierre">Descubrir lo que nos une</a>
         <figcaption class="loom-caption">
           <span id="loom-status" class="loom-sr-only">Telar · Simulación visual</span>
-          <span id="visualization-note" class="loom-sr-only">Selecciona un destino para descubrir su figura bordada.</span>
           <div id="embroidery-caption" hidden>
             <strong id="embroidery-name"></strong>
             <span id="embroidery-count"></span>
@@ -343,6 +342,7 @@
         <div class="history-controls" id="history-controls" hidden>
           <p id="history-coverage" role="status"></p>
         </div>
+        <div id="flight-provenance"></div>
         <p>Diseño y visualización textil · Un mundo entre hilos.</p>
       </details>
     </footer>

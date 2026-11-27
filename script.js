@@ -237,6 +237,7 @@ function initDemoFlights() {
   const visualization = document.querySelector('#loom-visualization');
   const figureOption = visualization.querySelector('[value="figure"]');
   const note = document.querySelector('#visualization-note');
+  const airportDisclosure = document.querySelector('#destination-airports-disclosure');
   const embroideryCaption = document.querySelector('#embroidery-caption');
   const embroideryName = document.querySelector('#embroidery-name');
   const embroideryCount = document.querySelector('#embroidery-count');
@@ -486,7 +487,7 @@ function initDemoFlights() {
     option.setAttribute('aria-pressed', String(id === activeEmotion));
     option.style.setProperty('--emotion-color', color);
     const name = document.createElement('strong');
-    name.textContent = id === 'neutral' ? 'Restablecer interpretación' : LoomInterpretations.get(id).label;
+    name.textContent = LoomInterpretations.get(id).label;
     const summary = document.createElement('span');
     summary.textContent = description;
     option.append(name, summary);
@@ -618,11 +619,10 @@ function initDemoFlights() {
     if (symbol && !matches.flightCount) state.visualization = 'connections';
     const showingFigure = state.visualization === 'figure' && Boolean(symbol);
     const routeIds = new Set(matches.matched.keys());
-    visualization.disabled = !symbol || !matches.flightCount;
     figureOption.disabled = !symbol || !matches.flightCount;
     visualization.value = state.visualization;
-    note.hidden = showingFigure;
-    note.textContent = !place ? 'Selecciona un destino para descubrir su figura bordada.'
+    note.hidden = Boolean(symbol && matches.flightCount);
+    note.textContent = !destination ? 'Selecciona un país para descubrir su figura bordada.'
       : !symbol ? 'Este destino todavía no cuenta con una figura bordada.'
         : !matches.flightCount ? 'La figura requiere vuelos observados para esta selección.' : 'Figura bordada disponible: ' + symbol.name + '.';
     embroideryCaption.hidden = !showingFigure;
@@ -653,7 +653,7 @@ function initDemoFlights() {
 
     const airportLabel = id => {
       const airport = (source.airports ?? FlightData.airports)[id];
-      return airport ? `${airport.city} (${airport.code})` : id;
+      return airport ? `${airport.city} (${airport.code || id})` : id;
     };
     fields.name.textContent = place.name;
     fields.type.textContent = [LoomDestinations.typeNames[place.type], place.city, place.country,
@@ -661,14 +661,22 @@ function initDemoFlights() {
     ].filter(Boolean).join(' · ');
     fields.period.textContent = dataset.period.label + (originCountry ? ' · Origen: ' + (catalog.get('country:' + originCountry)?.name ?? originCountry) : '');
     const flightsLabel = matches.flightCount === 1 ? 'vuelo' : 'vuelos';
+    const airportCount = matches.recordedAirports.size;
+    const airportsLabel = airportCount === 1 ? 'aeropuerto' : 'aeropuertos';
     const routesLabel = matches.matched.size === 1 ? 'ruta' : 'rutas';
     fields.count.textContent = matches.matched.size
-      ? `${format.format(matches.flightCount)} ${flightsLabel} · ${format.format(matches.matched.size)} ${routesLabel}`
+      ? `${format.format(matches.flightCount)} ${flightsLabel} · ${format.format(matches.matched.size)} ${routesLabel} · ${format.format(airportCount)} ${airportsLabel}`
       : 'No hay conexiones para este destino en el periodo seleccionado.';
     fields.coverage.textContent = `${isDemo() ? 'Datos de demostración' : dataset.provenance?.routes?.name ?? 'Sin fuente de rutas'} · Muestra de rutas: ${dataset.routeSlots} de ${dataset.slots} ${periodType === 'hour' ? 'horas' : 'días'}`;
-    fields.airports.textContent = matches.recordedAirports.size
-      ? 'Aeropuertos en la muestra del periodo: ' + [...matches.recordedAirports].sort().map(airportLabel).join('; ')
-      : 'Sin aeropuertos con vuelos para esta selección.';
+    airportDisclosure.hidden = !airportCount;
+    if (!airportCount) airportDisclosure.open = false;
+    fields.airports.replaceChildren(...[...matches.recordedAirports].map(airportLabel)
+      .sort((a, b) => a.localeCompare(b, 'es'))
+      .map(label => {
+        const airport = document.createElement('li');
+        airport.textContent = label;
+        return airport;
+      }));
     fields.origins.hidden = !matches.origins.length;
     fields.origins.textContent = 'Principales orígenes: ' + matches.origins.slice(0, 3).map(([id, count]) =>
       `${airportLabel(id)} · ${format.format(count)}`
@@ -830,6 +838,7 @@ function initDemoFlights() {
     state.direction = sense;
     state.layer = place ? 'highlight' : 'all';
     context.open = false;
+    airportDisclosure.open = false;
     renderDestination();
   }
 
@@ -851,8 +860,6 @@ function initDemoFlights() {
     if (state.visualization !== visualization.value) { loom.clearEdits(); secondary?.clearEdits(); }
     state.visualization = visualization.value;
     renderDestination();
-    closeLoomFilters();
-    document.querySelector('#loom-more').focus({ preventScroll: true });
   });
   layers.addEventListener('change', () => { state.layer = layers.value; renderDestination(); });
   direction.addEventListener('change', () => {
