@@ -29,31 +29,37 @@ const TextileLoom = (() => {
     const first = -4.85;
     const spacing = 9.7 / (quality.warp - 1);
     const random = seeded(data.seed);
-    const colors = ['#A9C1FD', '#A38BE8', '#A9C1FD', '#A38BE8', '#64B9F4'];
+    const colors = ['#AAC9FF', '#B78CF4', '#F9A2BC', '#80D8FF', '#FFCB89', '#C0AAFF'];
     function depthAt(x, y) {
       const transverse = Math.exp(-((x + .75) ** 2) / 3.4);
       const gathering = Math.exp(-((y - .18) ** 2) / 1.4);
-      return .56 * transverse * gathering + .19 * Math.sin(x * 1.06 + y * .83) + .10 * Math.sin(y * 2.2 - x * .55);
+      const falloff = Math.max(0, Math.cos(y / 2.44 * Math.PI / 2));
+      return falloff * (.56 * transverse * gathering + .19 * Math.sin(x * 1.06 + y * .83) + .10 * Math.sin(y * 2.2 - x * .55));
     }
     const fibers = Array.from({ length: quality.warp }, (_, index) => {
       const x = first + index * spacing;
-      const length = 4.72 - .34 * (x / 4.85) ** 2 + random() * .30;
-      const center = .14 * Math.sin(x * .68);
+      const depth = .055 * Math.sin(index * 1.75);
       return {
         id: 'urdimbre-' + index, system: 'warp', group: 'urdimbre',
         phase: random() * tau, color: colors[index % colors.length],
         radius: .0105 + random() * .0065, tension: .56 + random() * .26, steps: 52,
         sample(t) {
-          const y = center + (t - .5) * length;
-          return layout([x, y, depthAt(x, y)]);
+          const y = (t - .5) * 4.88;
+          return layout([x, y, depthAt(x, y) + depth]);
         }
       };
     });
+    for (const y of [-2.44, 2.44]) {
+      fibers.push({ id: 'bastidor-' + y, system: 'warp', frameRail: true, phase: 0,
+        color: '#9C7695', radius: .054, tension: 1, steps: 28,
+        sample: t => layout([lerp(-5.04, 5.04, t), y, 0]) });
+    }
     return { first, spacing, depthAt, fibers };
   }
 
   function makeWeft(data, quality, layout, warp, focus) {
     const fibers = [];
+    const yarnColors = ['#56CAFF', '#B699FF', '#FF91C6', '#FFC164', '#8C9EFF', '#E8DFFF', '#FF8F84', '#BB78E8'];
     const total = data.routes.reduce((sum, route) => sum + route.flights, 0);
     const budget = data.flightsPerStrand
       ? Math.min(100, Math.round(total / data.flightsPerStrand))
@@ -84,9 +90,7 @@ const TextileLoom = (() => {
           strength: route.concentration,
           flightInfo: { ...route.info, represented: Math.floor(route.flights / count) + Number(index < route.flights % count) },
           radius: thickness * (.83 + scale * .23),
-          color: index % 17 === 4 && routeSeed % 3 === 0 ? '#F7BF3B'
-            : index % 11 === 3 && routeSeed % 3 === 1 ? '#F47FA6'
-            : route.color,
+          color: yarnColors[(routeSeed % yarnColors.length + (index % 9 === 4 ? 3 : 0)) % yarnColors.length],
           sample(t) {
             const x = lerp(start[0], end[0], t);
             if (t === 0) return layout(start);
@@ -97,14 +101,14 @@ const TextileLoom = (() => {
             const gather = bundle * route.concentration;
             const separation = route.width * (1.08 - scale * .12) * (.38 + arc * (.76 - gather * .36));
             const y = lerp(start[1], end[1], t)
-              + arc * Math.sin(t * 7.2 + phaseOffset) * route.distance * .63
+              + arc * Math.sin(t * 7.2 + phaseOffset) * route.distance * .86
               + spread * separation * attachment + arc * Math.sin(t * 14 + phase) * .065;
             // At each warp column, adjacent picks alternate on opposite sides of the same depth surface.
             const crossing = Math.PI * ((x - warp.first) / warp.spacing + parity);
             const overUnder = Math.cos(crossing) * (.098 + thickness * .75 + gather * .026);
             // Relief peaks between columns and vanishes at the interlacing points.
             const pocket = Math.sin(crossing) ** 2;
-            const foldHeight = bundle * route.lift * (.24 + scale * .38);
+            const foldHeight = bundle * route.lift * (.38 + scale * .46);
             const relief = arc * (foldHeight * (.34 + pocket * .66)
               + pocket * (spread * .06 + lerp(start[2], end[2], t) * .08));
             return layout([x, y, lerp(lerp(start[2], end[2], t), warp.depthAt(x, y) + overUnder + relief, attachment)]);
@@ -225,7 +229,7 @@ const TextileLoom = (() => {
     let left = Infinity, right = -Infinity, bottom = Infinity, top = -Infinity;
     for (const fiber of mesh.ranges.values()) {
       if (fiber.retired) continue;
-      const margin = fiber.material === 'mesh' || fiber.material === 'band' ? .42 : fiber.radius * 2.7 + .075;
+      const margin = fiber.material === 'mesh' || fiber.material === 'band' ? .53 : fiber.radius * 2.7 + .075;
       for (const [x, y, z] of fiber.centers) {
         const cameraX = x + z * tilt;
         const cameraY = y - z * .28;
@@ -340,7 +344,7 @@ const TextileLoom = (() => {
       if (coverage <= .01) discard;
       // The free ends recede, while the central warp retains enough contrast to read at crossings.
       float endFade = smoothstep(0.0, .20, min(vYarn.x, 1.0 - vYarn.x));
-      float warpOpacity = .30 + .44 * endFade;
+      float warpOpacity = .46 + .32 * endFade;
       coverage *= mix(1.0, warpOpacity, vWarp);
       vec3 n = normalize(vNormal);
       float kind = floor(vPhase / 8.0);
@@ -359,17 +363,23 @@ const TextileLoom = (() => {
       grain += expression * expressionFinish.z * crossgrain;
       float contact = .93 - bundled * (.15 + expression * expressionFinish.w) * (1.0 - keyLight);
       float rim = pow(max(0.0, dot(n, normalize(vec3(.73, -.34, .59)))), 9.0);
-      float light = (.34 + keyLight * .60 + warm * .16 + grain) * contact;
+      float light = (.45 + keyLight * .63 + warm * .21 + grain) * contact;
       light *= clamp(.91 + vDepth * .14, .62, 1.22);
       light *= mix(1.21, .81, vWarp);
       float tone = clamp(dot(vColor, vec3(.22, .65, .13)) * .8 + .20 * sin(threadPhase * 2.1), 0.0, 1.0);
       vec3 tinted = mix(mix(expressionLow, expressionMid, smoothstep(.0, .60, tone)),
         expressionHigh, smoothstep(.56, 1.0, tone));
-      vec3 pigment = mix(vColor, tinted, expression * .76) * light + vec3(.045,.055,.10) * (1.0 - keyLight);
+      vec3 pigment = mix(vColor, tinted, expression * .91) * light + vec3(.045,.055,.10) * (1.0 - keyLight);
       pigment += vec3(.19,.17,.16) * warm * .2 + vec3(.76,.80,.92) * sheen * (.040 + satin * .10);
       pigment += vec3(.31, .40, .64) * rim * (.15 + bundled * .10) * (1.0 - vWarp);
-      coverage *= 1.0 - open * .18;
-      pigment = mix(pigment, vec3(.99, .82, .53), max(vHighlight * .36, vEdited * .11));
+      float backlight = pow(1.0 - abs(n.z), 2.25);
+      float glint = pow(.5 + .5 * twist, 5.0);
+      float radiance = clamp(1.0 + expression * (expressionFinish.y * .54 - expressionFinish.z), .58, 1.55);
+      pigment += (1.0 - vWarp) * radiance * (vColor * backlight * (.11 + open * .22)
+        + vec3(.68, .79, 1.0) * glint * (.045 + satin * .09));
+      coverage *= 1.0 - open * (.22 - .11 * backlight);
+      pigment = mix(pigment, vec3(1.0, .84, .53), max(vHighlight * .63, vEdited * .11));
+      pigment += vHighlight * sheen * vec3(.25, .19, .085);
       gl_FragColor = vec4(pigment, coverage * .95);
     }
   `;
@@ -454,6 +464,7 @@ const TextileLoom = (() => {
     let layerTexture, layerPixels, layerProgress = 1, layerDirty = true, layerDuration = .30;
 
     function opacityFor(fiber) {
+      if (fiber.frameRail) return embroidered ? .74 : 1;
       if (fiber.system === 'support') return embroidered && !fiber.retired ? 1 : 0;
       if (embroidered) {
         if (fiber.system === 'warp') return .25;
@@ -483,7 +494,7 @@ const TextileLoom = (() => {
         const visible = embroidered
           ? target > 0 && Boolean(fiber.figure) && fiber.pickable !== false
           : LoomDestinations.layerPickable(layer.mode, layer.routeIds.has(fiber.group), fiber.system === 'warp');
-        pixels.set([start, target, visible && !fiber.retired ? 255 : 0, fiber.figure ? 255 : 0], i);
+        pixels.set([start, target, visible && !fiber.retired && !fiber.frameRail ? 255 : 0, fiber.figure ? 255 : 0], i);
       }
       gl.bindTexture(gl.TEXTURE_2D, layerTexture);
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, pixels);

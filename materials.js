@@ -17,14 +17,14 @@ const LoomMaterials = (() => {
     if (kind === 'braid') {
       const turns = lod < .8 ? 8 : 12;
       const plies = [0, 1, 2].map(i =>
-        ({ ...part(radius * 1.38, radius * 1.24, radius * 1.04, [.80, 1.00, 1.13][i], turns, tau * i / 3),
+        ({ ...part(radius * 1.54, radius * 1.40, radius * 1.14, [.80, 1.00, 1.13][i], turns, tau * i / 3),
           gathering: strength }));
       return { kind, code: names[kind], steps: turns * 7, parts: [part(0, 0, radius, .66), ...plies] };
     }
     if (kind === 'mesh' || kind === 'band') {
       const open = kind === 'mesh';
-      const width = (open ? .154 : .093) + (open ? .23 : .17) * strength;
-      const count = lod < .8 ? 3 : open ? 6 : 7;
+      const width = (open ? .19 : .108) + (open ? .29 : .19) * strength;
+      const count = lod < .8 ? 3 : open ? 8 : 9;
       const turns = lod < .8 ? 4 : open ? 6 : 8;
       const parts = Array.from({ length: count }, (_, i) => {
         const across = i * 2 / (count - 1) - 1;

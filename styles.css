@@ -818,29 +818,6 @@ body.intro-view { min-block-size: 100svh; display: grid; grid-template-rows: aut
   --data-rail: clamp(10.3rem, 15vw, 14.25rem);
   --scene-footer: 3.1rem;
 }
-.loom-stage .loom-art {
-  --gallery-light: #6c5b9c45;
-  --gallery-fill: #2c47744f;
-  background:
-    radial-gradient(ellipse at 54% 43%, var(--gallery-light), transparent 63%),
-    radial-gradient(ellipse at 78% 64%, var(--gallery-fill), transparent 65%),
-    #11172e;
-}
-#telar[data-emotion="nostalgia"] .loom-art { --gallery-light: #61498e58; --gallery-fill: #37447038; }
-#telar[data-emotion="joy"] .loom-art { --gallery-light: #926c5652; --gallery-fill: #62457763; }
-#telar[data-emotion="anticipation"] .loom-art { --gallery-light: #4058a268; --gallery-fill: #6e53754a; }
-#telar[data-emotion="reunion"] .loom-art { --gallery-light: #98577948; --gallery-fill: #65448064; }
-.loom-stage:not(.is-comparing) .loom-art {
-  background:
-    radial-gradient(ellipse at 54% 43%, var(--gallery-light), transparent 63%),
-    radial-gradient(ellipse at 78% 64%, var(--gallery-fill), transparent 65%),
-    #11172e;
-}
-.loom-stage:not(.is-comparing) .loom-art::before {
-  content: ''; position: absolute; pointer-events: none; inset: .9rem .65rem;
-  border-block: 1px solid #ac9bd035;
-  background: linear-gradient(90deg, transparent, #ab9ac00d 38%, transparent 77%) top / 100% 4px no-repeat;
-}
 .loom-stage:not(.is-comparing) .loom-metric {
   background: linear-gradient(150deg, #20203b88, #151a3188 38%, #10152b00 75%);
   padding: 1.35rem .8rem .4rem .25rem;
@@ -918,3 +895,46 @@ body.intro-view { min-block-size: 100svh; display: grid; grid-template-rows: aut
   .intro-thread { position: absolute; inset: auto 5% 18% auto; width: 62px; margin: 0; }
   .intro-card { margin-block-end: 2.5rem; }
 }
+
+/* Light around the installation is separate from the woven surfaces and the data. */
+.loom-stage .loom-art,
+.loom-stage:not(.is-comparing) .loom-art {
+  --gallery-light: #58459f60;
+  --gallery-fill: #183f7273;
+  background:
+    radial-gradient(ellipse at 52% 42%, var(--gallery-light), transparent 63%),
+    radial-gradient(ellipse at 85% 75%, var(--gallery-fill), transparent 66%),
+    linear-gradient(150deg, #0a1028, #151834 68%, #0b142b);
+}
+@media (min-width: 900px) {
+  .loom-stage:not(.is-comparing) .loom-art canvas { filter: drop-shadow(0 0 4px #b39af75c); }
+}
+#telar[data-emotion="nostalgia"] .loom-art { --gallery-light: #6e568e65; --gallery-fill: #35447043; }
+#telar[data-emotion="joy"] .loom-art { --gallery-light: #b3665970; --gallery-fill: #8a4a856d; }
+#telar[data-emotion="anticipation"] .loom-art { --gallery-light: #394ea987; --gallery-fill: #7b58a252; }
+#telar[data-emotion="reunion"] .loom-art { --gallery-light: #9c4f816d; --gallery-fill: #713f5d63; }
+#telar[data-emotion="farewell"] .loom-art { --gallery-light: #1f386164; --gallery-fill: #30628355; }
+
+.loom-filter-bar :is(input, select, .button) { border-color: #bbbae34a; }
+.loom-filter-bar :is(input, select, .button):focus-visible { outline: 2px solid #deccff; outline-offset: 2px; }
+.loom-filter-bar > .button { background: linear-gradient(155deg, #272a4b66, #11193333); }
+.thread-info {
+  background: linear-gradient(145deg, #292347ec, #131e42e8 65%, #4e2d59e8);
+  border-color: #d4bff38c;
+  box-shadow: inset 0 1px #f1e2ff36, 0 0 17px #a880ee31, 0 12px 22px #05091b88;
+  border-radius: 1rem;
+}
+.thread-info > strong { font: 400 1.1rem var(--serif); }
+.needle-cursor { filter: drop-shadow(0 0 3px #cacfffad); }
+.needle-cursor:is([data-state="hold"], [data-state="drag"]) { filter: drop-shadow(0 0 5px #ffd287); }
+
+.first-thread-halo { filter: blur(5px); }
+.intro .intro-art { opacity: .98; }
+.intro-thread svg { filter: drop-shadow(0 0 8px #eab9655e) drop-shadow(0 2px 6px #0d112c); }
+.intro-card .lead { color: #fff0de; }
+.ending {
+  background: radial-gradient(ellipse at 24% 48%, #4e2e626e, transparent 64%),
+    radial-gradient(ellipse at 12% 75%, #16537e49, transparent 56%);
+}
+.ending-art svg { filter: drop-shadow(0 0 6px #c08bff5c); }
+.ending-copy { align-self: center; }

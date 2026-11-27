@@ -17,13 +17,13 @@ test('motives require exact geography and matching UTC reference period', () => 
   assert.equal(model.compatibleSurvey('country:MX', '2026-01-31'), survey);
 });
 
-test('neutral default and four distinct surface and motion presets', () => {
+test('neutral default and five distinct surface and motion presets', () => {
   const presets = [...model.presets.entries()];
-  assert.equal(presets.length, 5);
+  assert.equal(presets.length, 6);
   assert.equal(model.get('unknown').values[0], 0);
   assert.equal(model.transition().advance(0, false)[0], 0);
-  for (const section of [[1, 10], [10, 13], [13, 15]]) {
-    assert.equal(new Set(presets.slice(1).map(([, row]) => row.values.slice(...section).join())).size, 4);
+  for (const section of [[1, 10], [10, 13], [13, 15], [15, 17]]) {
+    assert.equal(new Set(presets.slice(1).map(([, row]) => row.values.slice(...section).join())).size, 5);
   }
 });
 

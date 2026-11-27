@@ -7,13 +7,15 @@ const LoomInterpretations = (() => {
   const presets = new Map([
     ['neutral', { label: 'Sin interpretación', values: neutral }],
     ['joy', { label: 'Felicidad', description: 'La luz se abre entre los hilos. Los tonos cálidos y la seda luminosa celebran las conexiones que un viaje hace posibles.', values: treatment(
-      ['64B9F4', 'F47FA6', 'F7BF3B'], .72, -.035, .02, 1.32, 1.35, .064, .032) }],
+      ['D16AB7', 'FF987A', 'FFE797'], .82, -.035, .02, 1.32, 1.55, .090, .043) }],
     ['nostalgia', { label: 'Nostalgia', description: 'En lilas y violetas, los hilos toman un ritmo más lento. La distancia deja espacio para recordar lugares y personas.', values: treatment(
-      ['243A68', 'A38BE8', 'DCDFFF'], -.62, .055, -.025, .57, .60, .017, .014) }],
+      ['636F9E', 'B6A0DA', 'F0CFEB'], -.76, .067, -.025, .45, .52, .034, .025) }],
     ['anticipation', { label: 'Expectativa', description: 'El azul eléctrico y los acentos dorados marcan un pulso de anticipación. Las fibras sugieren la tensión de lo que está por comenzar.', values: treatment(
-      ['474292', '64B9F4', 'F7BF3B'], .12, .072, .075, 1.18, .85, .021, .078) }],
+      ['474292', '64B9F4', 'F7BF3B'], .12, .072, .075, 1.25, 1.16, .021, .109) }],
     ['reunion', { label: 'Reencuentro', description: 'Los rosas cálidos destacan los cruces. Las hebras parecen acercarse, como vínculos que vuelven a encontrarse.', values: treatment(
-      ['64B9F4', 'F47FA6', 'DCDFFF'], .27, .035, .12, .88, 1.07, .044, .045) }]
+      ['9977CC', 'F47FA6', 'FFDEAE'], .33, .035, .19, .88, 1.14, .042, .073) }],
+    ['farewell', { label: 'Despedida', description: 'Las tramas se separan con un pulso lento y un reflejo frío. Entre ellas queda el espacio de lo que se aleja.', values: treatment(
+      ['304F9E', '6FBBE4', 'D2E4FF'], -.28, .035, .09, .66, 1.10, .128, .047) }]
   ]);
   const get = id => presets.get(id) ?? presets.get('neutral');
 

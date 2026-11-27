@@ -35,9 +35,14 @@ function mountCurtain(host) {
     draw(path(1.6), hue, .12, .65);
   }
   const firstThread = 'M -40 665 C 290 425 405 625 725 629 S 1150 560 1458 432';
-  draw(firstThread, '#F7BF3B', .11, 16);
-  draw(firstThread, '#D69039', .72, 5.5);
-  draw(firstThread, '#F7C772', .98, 2.8);
+  draw(firstThread, '#F7A640', .47, 10);
+  host.firstElementChild.lastElementChild.classList.add('first-thread-halo');
+  draw(firstThread, '#E79B41', .92, 4.6);
+  draw(firstThread, '#FFD180', .98, 2.35);
+  draw(firstThread, '#FFF0B5', .80, .65);
+  const goldTwist = host.firstElementChild.lastElementChild;
+  goldTwist.setAttribute('stroke-dasharray', '1.3 3.8');
+  goldTwist.setAttribute('transform', 'translate(0 1.5)');
   draw('M -40 663 C 290 422 405 622 725 627 S 1150 557 1458 430', '#FFF0BB', .82, .75);
 }
 
@@ -71,7 +76,7 @@ function mountLoomPreview(host) {
 
 function mountClosingWeave(host) {
   const draw = createTextile(host, '0 0 680 810', 'xMidYMid slice');
-  const colors = ['#9A82DE', '#D08AAC', '#79B8E2', '#AA91E9', '#DCAB69', '#BDB4F1'];
+  const colors = ['#B38DF7', '#F47EAF', '#70CFFF', '#A77AF2', '#FFB855', '#DFCEFF', '#FF827A'];
   for (let column = 0; column < 40; column++) {
     const x = 20 + column * 15;
     const drift = 12 * Math.sin(column * 1.9);
@@ -83,21 +88,26 @@ function mountClosingWeave(host) {
     const center = 75 + 83 * strip;
     const point = (t, across) => {
       const fold = Math.sin(t * 9 + strip * 1.35);
-      const width = (27 + strip % 3 * 10) * Math.sin(.38 + t * 2.65);
+      const width = (33 + strip % 3 * 13) * Math.sin(.38 + t * 2.65);
       return [
         670 * t - 45 + across * width * fold * .28,
         center + t * 122 + fold * (47 + 6 * strip) + across * width * Math.cos(t * 5 + strip)
       ];
     };
     const path = points => points.map(([x,y], i) => `${i ? 'L' : 'M'} ${x.toFixed(1)} ${y.toFixed(1)}`).join(' ');
+    for (const edge of [-1, 1]) {
+      const hem = Array.from({ length: 90 }, (_, i) => point(i / 89, edge + Math.sin(i * 1.35) * .042));
+      draw(path(hem), hue, .15, 6);
+      draw(path(hem), hue, .77, 2.1);
+    }
     for (let filament = 0; filament < 24; filament++) {
       const row = filament / 23 * 2 - 1;
       const points = Array.from({ length: 45 }, (_, i) => point(i / 44, row));
-      draw(path(points), hue, filament % 6 ? .34 : .66, filament % 6 ? .85 : 1.48);
+      draw(path(points), hue, filament % 6 ? .49 : .85, filament % 6 ? .85 : 1.48);
     }
     for (let stitch = 0; stitch < 52; stitch++) {
       const t = stitch / 51;
-      draw(path(Array.from({ length: 9 }, (_, i) => point(t + (i - 4) * .0009, i / 4 - 1))), hue, .40, .85);
+      draw(path(Array.from({ length: 9 }, (_, i) => point(t + (i - 4) * .0009, i / 4 - 1))), hue, .55, .85);
     }
   }
 }
@@ -490,6 +500,7 @@ function initDemoFlights() {
     anticipation: ['#64B9F4', 'Azul vivo y pulso de anticipación'],
     reunion: ['#F47FA6', 'Rosa cálido en los cruces'],
     joy: ['#F7BF3B', 'Luz dorada y ritmo abierto'],
+    farewell: ['#8ED8FC', 'Luz fría y tramas que se separan'],
     neutral: ['#DCDFFF', 'Volver al tejido original']
   };
   for (const [id, [color, description]] of Object.entries(treatments)) {
