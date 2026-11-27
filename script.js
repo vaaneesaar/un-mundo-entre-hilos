@@ -1140,7 +1140,10 @@ function initDemoFlights() {
     fields.stats.textContent = dataset.routeSlots ? [
       stat(routeCount, 'ruta', 'rutas'),
       ...(countryCount === null ? [] : [stat(countryCount, 'país conectado', 'países conectados')]),
-      stat(airportCount, 'aeropuerto', 'aeropuertos')
+      stat(airportCount, 'aeropuerto', 'aeropuertos'),
+      ...(periodType === 'hour' || periodType === 'day' ? [] : [
+        format.format(Math.round(observed / dataset.routeSlots)) + ' registros por día con datos'
+      ])
     ].join(' · ') : '';
     fields.coverage.textContent = `${isDemo() ? 'Datos de demostración' : dataset.provenance?.routes?.name ?? 'Sin fuente de rutas'} · ${dataset.routeSlots} de ${dataset.slots} ${periodType === 'hour' ? 'horas' : 'días'} con datos`;
     airportDisclosure.hidden = !place || !airportCount;

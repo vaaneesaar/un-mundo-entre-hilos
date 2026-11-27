@@ -174,14 +174,14 @@ const TextileLoom = (() => {
         from[axis] += a[axis] * weight;
         to[axis] += b[axis] * weight;
       }
-      depositAnchor(columns, a, weight, -1);
-      depositAnchor(columns, b, weight, 1);
+      depositAnchor(columns, a, route.flights, -1);
+      depositAnchor(columns, b, route.flights, 1);
       distance += route.distance * weight;
       east += Math.tanh((b[0] - a[0]) / 1.4) * weight;
       if (route.info.origin.country !== route.info.destination.country) international += weight;
     }
     const profile = columns.map(([density, height, relief]) => [
-      density / (density + .20), height / (density + .13), relief / (density + .13)
+      textileMass(density), height / (density + .13 * total), relief / (density + .13 * total)
     ]);
     return { from, to, distance, east, international,
       gathers: profile.map(column => column[0]), heights: profile.map(column => column[1]),
@@ -246,7 +246,7 @@ const TextileLoom = (() => {
           const y = guide + lift * (.28 * lerp(from[1], to[1], t) + .26 * drapeAt(heights, t)
             + (.14 + .58 * distance) * Math.sin(t * tau + phase));
           const z = drapeAt(depth, flow) * (.36 + strength * .88)
-            + .38 * lerp(from[2], to[2], t) + lift * .54 * drapeAt(reliefs, t)
+            + .38 * lerp(from[2], to[2], t) + lift * (.48 + .38 * drapeAt(gathers, t)) * drapeAt(reliefs, t)
             + (.20 + distance * .65) * lift * Math.cos(t * tau + phase)
             + (matched ? .17 : -.46);
           const edgeOffset = portrait ? 0 : .26 * z * (1 - lift);
@@ -365,7 +365,7 @@ const TextileLoom = (() => {
                 + .045 * Math.cos(t * 173 + edge * 7)) * edge ** 2 : 1;
             const acrossDistance = (sideOffset + (part.gauze ? radius * edge * fray : 0)) * widthAt;
             const fold = part.fold ? part.fold * Math.sin(t * 85) * radius * .68 : 0;
-            const depth = depthOffset + (part.gauze ? (1 - edge ** 2) * radius * (.75 + .46 * Math.sin(t * 12 + fiber.phase) + .38 * gather) + edge * fold : 0);
+            const depth = depthOffset + (part.gauze ? (1 - edge ** 2) * radius * (.75 + .46 * Math.sin(t * 12 + fiber.phase) + .68 * gather) + edge * fold * (1 + .4 * gather) : 0);
             const point = centers[i].map((n, k) =>
               n + (part.gauze ? 0 : radius * surfaceNormal[k]) + across[k] * acrossDistance + normal[k] * depth);
             vertices.set([...point, ...surfaceNormal, ...colors[partIndex],

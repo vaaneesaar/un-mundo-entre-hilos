@@ -67,7 +67,7 @@ const TextileNeedle = (() => {
         const route = fiber.flightInfo;
         const corridor = fiber.corridor;
         fields('label').textContent = route?.status === 'demo' ? 'Datos de demostración' : 'Datos del vuelo';
-        fields('type').textContent = corridor ? `Banda ${corridor.lane + 1} · ${FlightData.countFormat.format(corridor.flightCount)} vuelos` : route ? 'Ruta seleccionada'
+        fields('type').textContent = corridor ? `Banda ${corridor.lane + 1} · ${FlightData.countFormat.format(corridor.flightCount)} registros` : route ? 'Ruta seleccionada'
           : fiber.system === 'support' ? 'Puntada estructural del bordado. No representa vuelos'
           : 'Hilo estructural del telar. Forma parte de la urdimbre y no representa vuelos';
         fields('symbol').hidden = !fiber.figure;
@@ -80,7 +80,9 @@ const TextileNeedle = (() => {
           fields('origin').textContent = `${format(corridor.routes.length)} rutas direccionales`;
           fields('destination').textContent = `Rutas con más vuelos · ${examples.join(' / ')}`;
           fields('date').textContent = info.periodLabel ?? `${FlightData.dateFormat.format(new Date(info.periodStart))} UTC`;
-          fields('count').textContent = 'Agrupación textil de rutas observadas';
+          fields('count').textContent = corridor.routes.length === 1
+            ? 'La cantidad de registros de esta conexión determina el grosor y la densidad de la banda.'
+            : 'Esta banda agrupa varias rutas. La suma de sus registros determina el grosor y la densidad.';
           fields('distance').textContent = '';
           fields('source').textContent = `Fuente · ${info.sourceName ?? info.sourceId}`;
         } else if (route) {

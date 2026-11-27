@@ -24,7 +24,7 @@ const LoomMaterials = (() => {
       ];
       const style = styles[lane];
       // Even a sparse real corridor retains a translucent woven surface.
-      const width = (.15 + style.width * .82) * (.62 + 1.42 * strength + .16 * connectivity);
+      const width = (.23 + style.width * .48) * (.60 + 1.56 * strength + .10 * connectivity);
       const code = (strength > .70 && lane % 3 !== 0) || (concentration > .09 && strength > .39) ? 6 : style.code;
       const parts = [{ ...part(0, 0, width, 1), gauze: true, code }];
       const patch = [.20 + .05 * (lane % 4), .60 + .075 * (lane % 3)];

@@ -132,3 +132,24 @@ test('the ADSB.lol pilot dates build distinct route-driven textiles', async () =
   }
   assert.equal(new Set(shapes).size, days.length);
 });
+
+test('observed routes with different frequency and the same route at greater volume produce different textile weights', async t => {
+  const result = await source.read(time.interval('day', '2019-01-01'));
+  const quality = loom.qualityFor(1200);
+  const sorted = [...result.routes].sort((a, b) => a.flightCount - b.flightCount);
+  const low = sorted[0], high = sorted.at(-1);
+  const band = route => textile({ routes: [route] }, null, quality).weft[0];
+  const a = band(low), b = band(high);
+  const heavier = band({ ...high, flightCount: high.flightCount * 2 });
+  const width = value => materials.profile(value.material, value.radius, value.strength).parts[0].radius * 2;
+  assert.ok(a.strength < b.strength && b.strength < heavier.strength);
+  assert.ok(width(a) < width(b) && width(b) < width(heavier));
+  const concentration = value => Math.max(...value.corridor.gathers);
+  assert.ok(concentration(heavier) > concentration(b));
+  assert.equal(a.corridor.routes[0].id, low.routeId);
+  assert.equal(b.corridor.routes[0].id, high.routeId);
+  t.diagnostic(JSON.stringify([a, b].map(value => ({
+    route: value.corridor.routes[0].id, count: value.corridor.flightCount,
+    density: value.strength, width: width(value)
+  }))));
+});

@@ -5,14 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#101B35">
   <title>Un mundo entre hilos</title>
-  <link rel="stylesheet" href="styles.css?v=gesto-visible">
+  <link rel="stylesheet" href="styles.css?v=lectura-textil">
   <script src="flights.js?v=international" defer></script>
   <script src="destinations.js?v=country-filter" defer></script>
-  <script src="materials.js?v=velo-textil" defer></script>
+  <script src="materials.js?v=lectura-textil" defer></script>
   <script src="embroidery.js?v=coleccion-figuras" defer></script>
-  <script src="needle.js?v=resonancias" defer></script>
+  <script src="needle.js?v=lectura-textil" defer></script>
   <script src="interpretations.js?v=escenarios-hipoteticos" defer></script>
-  <script src="loom.js?v=resonancias" defer></script>
+  <script src="loom.js?v=lectura-textil" defer></script>
   <script src="calendar.js?v=cobertura-diaria" defer></script>
   <script src="temporal.js?v=series-historicas" defer></script>
   <script src="providers.js?v=datos-abiertos" defer></script>
@@ -21,7 +21,7 @@
   <script src="scenarios.js?v=pulso-textil" defer></script>
   <script src="loom-audio.js?v=ambientes" defer></script>
   <script src="hand-gesture.js?v=gesto" defer></script>
-  <script src="script.js?v=gesto" defer></script>
+  <script src="script.js?v=lectura-textil" defer></script>
 </head>
 <body>
   <header class="site-header">
@@ -290,6 +290,18 @@
                 <p id="embroidery-description-compact" hidden></p>
               </div>
               <p id="visualization-note" hidden></p>
+              <button class="loom-key-trigger" type="button" popovertarget="loom-key">¿Qué representan los hilos?</button>
+              <section class="loom-key" id="loom-key" popover aria-label="Qué representan los hilos">
+                <ul>
+                  <li><i aria-hidden="true"></i>Una trama más tupida indica más registros en la banda.</li>
+                  <li><i aria-hidden="true"></i>Una banda más gruesa acumula más registros de sus rutas.</li>
+                  <li><i aria-hidden="true"></i>Origen y destino orientan la curva mediante anclajes invisibles.</li>
+                  <li><i aria-hidden="true"></i>Las rutas con aeropuertos compartidos pueden acercar sus bandas.</li>
+                  <li><i aria-hidden="true"></i>Los pliegues existentes ganan relieve donde se concentran los registros.</li>
+                </ul>
+                <small>Las curvas son artísticas. Un cruce visual no demuestra una conexión aérea. Los colores distinguen agrupaciones y las emociones son interpretaciones.</small>
+                <button type="button" class="loom-key-trigger" popovertarget="loom-key" popovertargetaction="hide">Cerrar guía</button>
+              </section>
             </section>
 
             <div id="emotion-disclosure" hidden>
