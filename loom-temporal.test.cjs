@@ -120,3 +120,15 @@ test('authentic periods reshape the same stable corridor IDs on a shared visual 
     assert.ok(loom.textileMass(a) < loom.textileMass(b));
   }
 });
+
+test('the ADSB.lol pilot dates build distinct route-driven textiles', async () => {
+  const days = source.dates.filter(day => source.providerAt(day) === 'ADSB.lol');
+  const shapes = [];
+  for (const day of days) {
+    const result = await source.read(time.interval('day', day));
+    const bands = textile(result, null, loom.qualityFor(1366)).weft;
+    assert(bands.length > 0, day);
+    shapes.push(JSON.stringify(bands.map(band => [band.corridor.id, band.sample(.4)])));
+  }
+  assert.equal(new Set(shapes).size, days.length);
+});

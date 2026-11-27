@@ -6,6 +6,7 @@ const providers = require('./providers.js');
 const flights = require('./flights.js');
 const time = require('./temporal.js');
 const fs = require('node:fs');
+const { createHash } = require('node:crypto');
 const load = file => providers.imported(JSON.parse(fs.readFileSync(require.resolve('./data/' + file), 'utf8')), flights, time);
 
 test('historical requests read only intersecting verified months and leave absent periods empty', async () => {
@@ -24,8 +25,8 @@ test('historical requests read only intersecting verified months and leave absen
   assert.equal(missing.routeSlots,0);
   assert.equal(missing.total,null);
   assert.equal(opened.length,1);
-  assert.equal(source.status('2026-10'),'unpublished');
-  assert.equal(source.status('2024-04'),'separate');
+  assert.equal(source.status('2026-10'),'pendingAdsb');
+  assert.equal(source.status('2024-04'),'pendingAdsb');
   assert.equal(source.status('2020-03'), index.months.some(row => row.month === '2020-03') ? 'available' : 'pending');
   const across = await source.read(time.interval('week', '2019-02-01'));
   assert.equal(across.routeSlots,7);
@@ -67,7 +68,7 @@ test('every integrated month agrees with its day index and has no world total', 
     assert.equal(result.routes.reduce((sum, route) => sum + route.flightCount, 0),
       entry.days.reduce((sum, [,count]) => sum + count, 0), entry.month);
     assert.equal(result.total, null, entry.month);
-    assert.equal(result.routeSource, 'opensky:routes', entry.month);
+    assert.equal(result.routeSource, entry.license === 'ODbL-1.0' ? 'adsblol:routes' : 'opensky:routes', entry.month);
   }
 });
 
@@ -77,37 +78,32 @@ test('calendar availability keeps leap days and does not fill confirmed OpenSky 
   assert(source.dates.includes('2020-02-29'));
 });
 
-test('an indexed OPDI month is selectable and cross-boundary weeks keep sources separate', async () => {
+test('OPDI cannot enter the public manifest', () => {
   const index = structuredClone(require('./data/history.json'));
-  const days = [['2022-01-01', 7], ['2022-01-02', 5]];
   index.months.push({
     month: '2022-01', file: 'opdi-2022-01.json', original: 'flight_list_202201.parquet',
-    release: 'v0.0.2', sha256: '0'.repeat(64), days
+    release: 'v0.0.2', sha256: '0'.repeat(64), days: [['2022-01-01', 7]]
   });
-  const payload = {
-    version: 1,
-    routes: {
-      provider: 'opdi', url: 'https://www.opdi.aero/flight-list-data.html',
-      authorization: 'Synthetic test only', definition: 'Synthetic fixture', coverage: 'Two UTC days',
-      retrievedAt: '2026-11-27T00:00:00Z', records: [],
-      daily: Object.fromEntries(days.map(([day,count]) => [day, [['KJFK','EGLL',count]]]))
-    }
-  };
-  const source = history.create(index, file => file === 'opdi-2022-01.json'
-    ? providers.imported(payload, flights, time) : load(file), flights, time);
-  assert(source.dates.includes('2022-01-01'));
-  assert.equal(source.status('2022-01'), 'available');
-  assert.equal(source.status('2022-02'), 'separate');
-  const cached = time.cache(source);
-  const earlier = await cached.read(time.interval('week', '2021-12-31'));
-  const later = await cached.read(time.interval('week', '2022-01-01'));
-  assert.equal(earlier.routeSource, 'opensky:routes');
-  assert.equal(later.routeSource, 'opdi:routes');
-  assert.equal(later.routeSlots, 2);
-  assert.equal(later.slots, 7);
-  assert.equal(later.routes[0].flightCount, 12);
-  const year = await cached.read(time.interval('year', '2022-01-01'));
-  assert.equal(year.routeSlots, 2);
-  assert.equal(year.routes[0].flightCount, 12);
-  assert.equal(year.provenance.routes.name, 'OPDI / EUROCONTROL');
+  assert.throws(() => history.create(index, load, flights, time), /Entrada mensual inválida/);
+});
+
+test('ADSB.lol days use their own routes, geography and partial coverage', async () => {
+  const index = require('./data/history.json');
+  const source = history.create(index, load, flights, time);
+  const additions = index.months.filter(entry => entry.license === 'ODbL-1.0');
+  assert.equal(additions.length, 4);
+  assert(!source.dates.some(day => day.startsWith('2022')));
+  for (const entry of additions) {
+    const [[day, expected]] = entry.days;
+    const raw = fs.readFileSync(require.resolve('./data/' + entry.file));
+    assert.equal(createHash('sha256').update(raw).digest('hex'), entry.sha256);
+    assert.match(JSON.parse(raw).routes.authorization, /ODbL 1\.0/);
+    const result = await source.read(time.interval('day', day));
+    assert.equal(result.routeSource, 'adsblol:routes');
+    assert.equal(result.routes.reduce((sum, route) => sum + route.flightCount, 0), expected);
+    assert(result.routes.every(route => source.anchors[route.originId] && source.anchors[route.destinationId]));
+    const year = await source.read(time.interval('year', day));
+    assert.equal(year.routeSlots, 1);
+    assert(year.slots > year.routeSlots);
+  }
 });

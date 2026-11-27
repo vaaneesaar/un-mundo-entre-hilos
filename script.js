@@ -536,7 +536,10 @@ function initDemoFlights() {
 
   function renderSample(result) {
     sampleMetric.hidden = false;
-    sampleMetric.querySelector('[data-sample-label]').textContent = isDemo() ? 'Vuelos de demostración' : 'Vuelos observados · muestra total';
+    const sampleLabel = sampleMetric.querySelector('[data-sample-label]');
+    sampleLabel.textContent = isDemo() ? 'Vuelos de demostración'
+      : result.routeSource === 'adsblol:routes' ? 'Trayectos reconstruidos · muestra'
+      : 'Vuelos observados · muestra total';
     const sourceName = isDemo() ? 'Simulación' : result.provenance?.routes?.name ?? 'Sin fuente de rutas';
     const partial = result.routeSlots > 0 && result.routeSlots < result.slots;
     const sampleCoverage = partial ? ` · ${result.routeSlots} de ${result.slots} días con datos` : '';
@@ -1100,6 +1103,7 @@ function initDemoFlights() {
     const countryCount = place ? null : new Set([...relatedIds].map(id => registry[id]?.country).filter(Boolean)).size;
     const stat = (count, one, many) => format.format(count) + ' ' + (count === 1 ? one : many);
     const tally = !dataset.routeSlots ? 'Sin registros para este periodo'
+      : dataset.routeSource === 'adsblol:routes' ? stat(observed, 'trayecto reconstruido', 'trayectos reconstruidos')
       : stat(observed, 'vuelo', 'vuelos') + (isDemo() ? ' de demostración' : observed === 1 ? ' observado' : ' observados');
     if (fields.count.textContent !== tally) {
       fields.count.textContent = tally;
@@ -1134,7 +1138,7 @@ function initDemoFlights() {
     const type = result?.period.type;
     field('date').textContent = result?.period.label ?? status;
     field('value').textContent = result ? display(result.routeSlots ? (matches?.flightCount ?? routeVolume(result.routes)) : metric(result)) : '—';
-    field('unit').textContent = !result ? '' : result.routeSlots ? 'vuelos observados · ' + (catalog.get(state.destinationId)?.name ?? catalog.get('country:' + originCountry)?.name ?? 'Todos los países') : type === 'hour' ? 'vuelos en la hora'
+    field('unit').textContent = !result ? '' : result.routeSlots ? (result.routeSource === 'adsblol:routes' ? 'trayectos reconstruidos · ' : 'vuelos observados · ') + (catalog.get(state.destinationId)?.name ?? catalog.get('country:' + originCountry)?.name ?? 'Todos los países') : type === 'hour' ? 'vuelos en la hora'
       : type === 'day' ? 'vuelos en el día' : result.coverage === 'partial' ? 'vuelos por día disponible' : 'vuelos por día';
     const routeProvider = result?.provenance?.routes?.name;
     field('coverage').textContent = result?.routeSlots && routeProvider

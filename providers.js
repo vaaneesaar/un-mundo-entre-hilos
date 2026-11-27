@@ -4,6 +4,7 @@ const LoomProviders = (() => {
   const authorities = {
     fr24: { name: 'Flightradar24', hosts: ['www.flightradar24.com', 'fr24api.flightradar24.com'] },
     opensky: { name: 'OpenSky Network', hosts: ['opensky-network.org', 'openskynetwork.github.io'] },
+    adsblol: { name: 'ADSB.lol', hosts: ['www.adsb.lol', 'adsb.lol'] },
     opdi: { name: 'OPDI / EUROCONTROL', hosts: ['www.opdi.aero', 'www.eurocontrol.int'] }
   };
   const text = value => typeof value === 'string' && value.trim() && value.length <= 600;

@@ -2,20 +2,20 @@
 
 const LoomHistory = (() => {
   const publication = month => month >= '2019-01' && month <= '2021-12' ? 'OpenSky'
-    : month >= '2022-01' && month <= '2026-09' ? 'OPDI' : null;
+    : month >= '2023-01' && month <= '2026-12' ? 'ADSB.lol' : null;
   const series = {
     OpenSky: { id: 'opensky:routes', file: /^opensky-[a-z0-9-]+\.json$/,
       original: /^flightlist_\d{8}_\d{8}\.csv\.gz$/, checksum: 'md5', hash: /^[a-f0-9]{32}$/,
       coverage: 'OpenSky v21.12 · muestra ADS-B con aeropuertos estimados' },
-    OPDI: { id: 'opdi:routes', file: /^opdi-\d{4}-\d{2}\.json$/,
+    'ADSB.lol': { id: 'adsblol:routes', file: /^adsblol-\d{4}-\d{2}\.json$/,
       checksum: 'sha256', hash: /^[a-f0-9]{64}$/ }
   };
   const providerAt = day => publication(day.slice(0, 7));
   const labels = {
     available: 'Disponible',
     pending: 'Publicado por OpenSky · mes aún no descargado',
-    separate: 'Publicado por OPDI · serie independiente sin cargar',
-    unpublished: 'Sin datos publicados en las fuentes revisadas'
+    pendingAdsb: 'ADSB.lol · sin días validados para el Telar',
+    unpublished: 'Sin datos habilitados para publicación'
   };
 
   function create(index, load, flights, time) {
@@ -29,8 +29,7 @@ const LoomHistory = (() => {
           months.has(entry.month) || !expected.file.test(entry.file) ||
           !expected.hash.test(entry[expected.checksum]) || !Array.isArray(entry.days) || !entry.days.length ||
           (provider === 'OpenSky' ? !expected.original.test(entry.original)
-            : entry.original !== 'flight_list_' + entry.month.replace('-', '') + '.parquet' ||
-              entry.file !== 'opdi-' + entry.month + '.json' || entry.release !== 'v0.0.2'))
+            : entry.file !== 'adsblol-' + entry.month + '.json' || entry.license !== 'ODbL-1.0'))
         throw Error('Entrada mensual inválida.');
       for (const [day, count] of entry.days) {
         flights.dayBounds(day);
@@ -74,7 +73,7 @@ const LoomHistory = (() => {
 
     function status(month) {
       return months.has(month) ? 'available' : publication(month) === 'OpenSky' ? 'pending'
-        : publication(month) === 'OPDI' ? 'separate' : 'unpublished';
+        : publication(month) === 'ADSB.lol' ? 'pendingAdsb' : 'unpublished';
     }
 
     return {
