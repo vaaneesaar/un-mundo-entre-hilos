@@ -162,3 +162,26 @@ test('comparison framing fits actual castillo fibers at both desktop and mobile 
     }
   }
 });
+
+test('the fifteen new landmarks weave finite geometry and respond to observed activity', () => {
+  const { connections, quality } = scenario(1000, 'low');
+  const inputs = connections.weft.slice(0, 24);
+  const denser = inputs.map(fiber => ({
+    ...fiber, flightInfo: { ...fiber.flightInfo, represented: fiber.flightInfo.represented * 10 }
+  }));
+  const countries = ['SA', 'IT', 'IN', 'EG', 'AU', 'CN', 'CA', 'AE', 'DE', 'GR', 'TR', 'KR', 'CO', 'AR', 'PE'];
+  const landmarks = countries.map(country => LoomEmbroidery.forDestination('country:' + country));
+  assert.equal(new Set(landmarks.map(figure => figure.name)).size, countries.length);
+  for (const figure of landmarks) {
+    for (const profile of [quality, loom.qualityFor(390)]) {
+      const woven = LoomEmbroidery.build(figure, inputs, profile);
+      const high = LoomEmbroidery.build(figure, denser, profile);
+      assert(high.supports.length > woven.supports.length, figure.name);
+      assert.deepEqual(woven.fibers.map(fiber => fiber.flightInfo), inputs.map(fiber => fiber.flightInfo));
+      const mesh = loom.meshFibers({warp: [], weft: woven.fibers, supports: woven.supports}, profile, new Set(), new Map());
+      assert(mesh.vertices.every(Number.isFinite), figure.name);
+      assert(mesh.indices.every(index => index < mesh.vertexCount), figure.name);
+      assert(mesh.vertexCount < 275000, figure.name);
+    }
+  }
+});

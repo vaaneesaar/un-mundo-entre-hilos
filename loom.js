@@ -918,8 +918,9 @@ const TextileLoom = (() => {
       morph = prior.size ? 0 : 1;
       rebuildNeeded = false;
       insertion = paused ? 10 : 0;
-      if (fibers.omitted) status.textContent = `Telar 3D · Simulación visual · ${fibers.omitted} rutas fuera del presupuesto visual`;
-      else status.textContent = 'Telar 3D';
+      const simulated = data.routes[0]?.info?.status === 'demo';
+      const subset = fibers.omitted ? ` · ${fibers.omitted} rutas fuera del presupuesto visual` : '';
+      status.textContent = 'Telar 3D' + (fibers.omitted && simulated ? ' · Simulación visual' : '') + subset;
       needle.prune(new Set(mesh.byCode.slice(1).filter(fiber => !fiber.retired).map(fiber => fiber.id)));
       gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
       gl.bufferData(gl.ARRAY_BUFFER, mesh.vertices, gl.STATIC_DRAW);

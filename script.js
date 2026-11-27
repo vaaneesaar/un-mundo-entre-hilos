@@ -1043,7 +1043,7 @@ function initDemoFlights() {
     direction.disabled = !destination || Boolean(originCountry);
     Array.from(layers.options).slice(1).forEach(option => { option.disabled = !place; });
     layers.value = state.layer;
-    const symbol = destination?.type === 'country' ? LoomEmbroidery.forDestination(destination.id) : null;
+    const symbol = destination ? LoomEmbroidery.forDestination(destination.id) : null;
     if (!symbol) state.visualization = 'connections';
     if (symbol && !matches.flightCount) state.visualization = 'connections';
     const showingFigure = state.visualization === 'figure' && Boolean(symbol);
@@ -1051,7 +1051,7 @@ function initDemoFlights() {
     figureOption.disabled = !symbol || !matches.flightCount;
     visualization.value = state.visualization;
     note.hidden = showingFigure;
-    note.textContent = destination?.type !== 'country' ? 'Selecciona un país para descubrir su figura bordada.'
+    note.textContent = !destination ? 'Selecciona un país para descubrir su figura bordada.'
       : !symbol ? 'Este destino todavía no cuenta con una figura bordada.'
         : !matches.flightCount ? 'La figura requiere vuelos observados para esta selección.' : 'Elige Figura bordada para ver la lectura poética de ' + destination.name + '.';
     embroideryCaption.hidden = !showingFigure;
