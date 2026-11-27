@@ -692,7 +692,10 @@ function initDemoFlights() {
     field('value').textContent = result ? display(result.routeSlots ? (matches?.flightCount ?? routeVolume(result.routes)) : metric(result)) : '—';
     field('unit').textContent = !result ? '' : result.routeSlots ? 'vuelos observados · ' + (catalog.get(state.destinationId)?.name ?? catalog.get('country:' + originCountry)?.name ?? 'Todos los países') : type === 'hour' ? 'vuelos en la hora'
       : type === 'day' ? 'vuelos en el día' : result.coverage === 'partial' ? 'vuelos por día disponible' : 'vuelos por día';
-    field('coverage').textContent = result ? coverage(result) : '';
+    const routeProvider = result?.provenance?.routes?.name;
+    field('coverage').textContent = result?.routeSlots && routeProvider
+      ? `${routeProvider} · ${result.routeSlots} de ${result.slots} días con datos`
+      : result ? coverage(result) : '';
     field('destination').hidden = !matches && !result?.routeSlots;
     if (matches) field('destination').textContent =
       `${result.routeSlots ? display(matches.flightCount) : '—'} vuelos de la selección en la muestra`;

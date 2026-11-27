@@ -42,7 +42,12 @@ def build(args, *, airport_catalog=None, return_payload=False):
     daily = defaultdict(Counter)
     seen = set()
     with gzip.open(args.csv, "rt", encoding="utf-8-sig", newline="") as stream:
-        for row in csv.DictReader(stream):
+        rows = csv.DictReader(stream)
+        fields = set(rows.fieldnames or [])
+        identifier = "aircraft_uid" if "aircraft_uid" in fields else "icao24"
+        if not {"firstseen", "origin", "destination", identifier} <= fields:
+            raise ValueError("El CSV no incluye los campos de vuelo requeridos.")
+        for row in rows:
             try:
                 stamp = utc(row["firstseen"])
             except ValueError:
@@ -51,7 +56,7 @@ def build(args, *, airport_catalog=None, return_payload=False):
                 continue
             day = stamp.date().isoformat()
             origin, target = row["origin"].strip().upper(), row["destination"].strip().upper()
-            uid = row["aircraft_uid"].strip()
+            uid = row[identifier].strip().lower()
             reason = ""
             if day[:7] != month:
                 reason = "fuera_del_periodo"
