@@ -1,7 +1,7 @@
 'use strict';
 
 const LoomMaterials = (() => {
-  const names = { cotton: 0, silk: 1, braid: 2, mesh: 3, band: 4 };
+  const names = { cotton: 0, silk: 1, braid: 2, mesh: 3, band: 4, wood: 9 };
   const tau = Math.PI * 2;
 
   function routeMaterial(index, seed) {
@@ -25,18 +25,18 @@ const LoomMaterials = (() => {
       const style = styles[lane];
       const width = style.width * (.65 + .68 * strength + .12 * connectivity);
       const parts = [{ ...part(0, 0, width, 1), gauze: true, code: style.code }];
-      const patch = [.24 + .04 * (lane % 4), .61 + .07 * (lane % 3)];
+      const patch = [.20 + .05 * (lane % 4), .60 + .075 * (lane % 3)];
       if (lane % 2 === 0 || lane === 5) {
-        parts.push({ ...part(width * .14, .065, width * .63, .93), gauze: true, code: 6, window: patch });
+        parts.push({ ...part(width * .18, .105, width * .68, .93), gauze: true, code: 6, window: patch });
       }
       for (const edge of [-1, 1]) {
-        parts.push({ ...part(width * edge * 1.06, .027, radius * .29, .84), code: 7, hem: true });
+        parts.push({ ...part(width * edge * 1.01, .008, radius * .23, .94), code: 7, hem: true });
       }
       if (lod >= .8 || lane % 2 === 0) {
         parts.push({ ...part(width * .68, -.065, radius * .27, 1.1), code: 7, hem: true, loose: true });
       }
       if (style.cord) {
-        const plyRadius = (.018 + .017 * strength + .009 * concentration);
+        const plyRadius = .013 + .014 * strength + .008 * concentration;
         for (let ply = 0; ply < 3; ply++) {
           parts.push({ ...part(plyRadius * 1.06, plyRadius * 1.18, plyRadius * 1.15, [.80, 1.01, 1.16][ply], 19, tau * ply / 3),
             cordSide: width * .57, code: 2, window: style.cord });

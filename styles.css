@@ -1006,3 +1006,14 @@ body:has(#cierre:not([hidden])) .method-footer summary { font-size: .75rem; }
 @media (min-width: 841px) and (max-height: 760px) {
   .intro-view .intro { padding-block: clamp(1rem, 3.8svh, 2rem); }
 }
+
+#telar .loom-art {
+  background:
+    radial-gradient(ellipse at 39% 46%, var(--gallery-light), transparent 64%),
+    radial-gradient(ellipse at 76% 63%, var(--gallery-fill), transparent 66%),
+    linear-gradient(160deg, #090f24, #111a35 64%, #0b122a);
+}
+#telar .needle-cursor:is([data-state="near"], [data-state="hold"], [data-state="drag"]) {
+  background: linear-gradient(180deg, #fff6dd 15%, #fff 37%, #bf9b65 59%, #a55429 94%);
+  filter: drop-shadow(0 0 4px #ffd583c9);
+}
