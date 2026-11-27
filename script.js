@@ -75,40 +75,118 @@ function mountLoomPreview(host) {
 }
 
 function mountClosingWeave(host) {
-  const draw = createTextile(host, '0 0 680 810', 'xMidYMid slice');
-  const colors = ['#B38DF7', '#F47EAF', '#70CFFF', '#A77AF2', '#FFB855', '#DFCEFF', '#FF827A'];
-  for (let column = 0; column < 40; column++) {
-    const x = 20 + column * 15;
-    const drift = 12 * Math.sin(column * 1.9);
-    draw(`M ${x} -15 Q ${x + drift} 375 ${x - drift} 825`, colors[column % colors.length], .31, 1);
+  const draw = createTextile(host, '0 0 1440 800', 'none');
+  const svg = host.firstElementChild;
+  const defs = document.createElementNS(svgNamespace, 'defs');
+  svg.prepend(defs);
+  const palette = ['#F47FA6', '#E94399', '#A38BE8', '#DCDFFF', '#64B9F4', '#A9C1FD', '#F7BF3B', '#FF9138'];
+  const tau = Math.PI * 2;
+  const path = points => points.map(([x, y], i) => `${i ? 'L' : 'M'}${x.toFixed(1)} ${y.toFixed(1)}`).join(' ');
+  const samples = (length, make) => Array.from({ length }, (_, i) => make(i / (length - 1)));
+  function panel(hue, id, outline, dense) {
+    const gradient = document.createElementNS(svgNamespace, 'linearGradient');
+    gradient.id = `closing-yarn-${id}`;
+    gradient.setAttribute('x2', '.65');
+    gradient.setAttribute('y2', '1');
+    for (const [offset, color, opacity] of [[0, hue, .24], [.29, hue, .73], [.49, '#20112e', .48],
+      [.65, hue, .82], [.84, hue, .36], [1, hue, .06]]) {
+      const stop = document.createElementNS(svgNamespace, 'stop');
+      stop.setAttribute('offset', offset);
+      stop.setAttribute('stop-color', color);
+      stop.setAttribute('stop-opacity', opacity);
+      gradient.append(stop);
+    }
+    defs.append(gradient);
+    draw(outline, hue, .18, 2);
+    const face = svg.lastElementChild;
+    face.setAttribute('fill', `url(#${gradient.id})`);
+    face.setAttribute('fill-opacity', dense ? '.94' : '.39');
   }
 
-  for (let strip = 0; strip < 8; strip++) {
-    const hue = colors[strip % colors.length];
-    const center = 75 + 83 * strip;
-    const point = (t, across) => {
-      const fold = Math.sin(t * 9 + strip * 1.35);
-      const width = (33 + strip % 3 * 13) * Math.sin(.38 + t * 2.65);
-      return [
-        670 * t - 45 + across * width * fold * .28,
-        center + t * 122 + fold * (47 + 6 * strip) + across * width * Math.cos(t * 5 + strip)
-      ];
+  for (let i = 0; i < 87; i++) {
+    const x = i * 6.4 + 4 * Math.sin(i * 2.4);
+    const drift = 7 * Math.sin(i * .89);
+    const end = 450 + 410 * Math.sin(i * .48) ** 2;
+    const hue = palette[i % palette.length];
+    draw(`M${x} -15 C${x + drift} 180 ${x - drift} 400 ${x + drift * .8} ${end}`, hue, .23 + .26 * Math.sin(i * 2.1) ** 2, .65 + i % 5 * .16);
+  }
+
+  // Centerlines have independent Bézier trajectories and asymmetric envelopes.
+  const drapes = [
+    [[77,-35, 185,40, 91,385, 236,805], 77, 1, true],
+    [[276,-20, 185,95, 389,379, 264,710], 56, 6, true],
+    [[385,12, 284,190, 465,265, 405,524], 67, 3, true],
+    [[-95,96, 236,29, 133,270, 620,315], 72, 2, false],
+    [[-80,400, 102,156, 178,280, 397,730], 94, 4, false],
+    [[77,90, 385,98, 194,394, 630,451], 84, 0, true],
+    [[-88,578, 315,380, 297,501, 548,666], 90, 7, false],
+    [[-70,385, 111,304, 122,682, 349,826], 89, 2, true],
+    [[160,253, 278,570, 502,433, 647,756], 78, 2, false],
+    [[-60,558, 222,648, 86,370, 367,668], 91, 1, true],
+    [[-70,200, 98,361, 317,541, 688,688], 84, 5, false],
+    [[102,594, 403,816, 331,614, 673,803], 83, 7, false],
+    [[-38,66, 129,23, 119,305, 360,243], 67, 3, false],
+    [[290,378, 372,352, 451,491, 584,455], 53, 0, true]
+  ];
+  const bezier = (a,b,c,d,t) => a*(1-t)**3 + 3*b*t*(1-t)**2 + 3*c*t*t*(1-t) + d*t**3;
+  for (const [index, [p, width, hueIndex, dense]] of drapes.entries()) {
+    const hue = palette[hueIndex];
+    const phase = index * 1.37;
+    const center = t => [
+      bezier(p[0],p[2],p[4],p[6],t) + 13 * Math.sin(t * 16 + phase) * Math.sin(t * Math.PI),
+      bezier(p[1],p[3],p[5],p[7],t) + 24 * Math.sin(t * 14 + phase) * Math.sin(t * Math.PI)
+    ];
+    const point = (t, u) => {
+      const [x,y] = center(t);
+      const [xx,yy] = center(t + .001);
+      const length = Math.hypot(xx-x, yy-y) || 1;
+      const roll = Math.cos(phase + t * (3.5 + index % 4));
+      const hem = 1 + .086 * Math.sin(t * 89 + phase + u * 4) + .06 * Math.cos(t * 173 + u * 7);
+      const gather = 1 - .45 * Math.exp(-(((t - .54) / .095) ** 2));
+      const spread = width * (.48 + .50 * Math.sin(t * Math.PI)) * (1 - .95 * t ** 6) * gather * hem;
+      const dome = (1 - u*u) * spread * .37 * Math.sin(t * 12 + phase);
+      return [x + (yy-y)/length * u * spread * roll + dome * .58,
+        y - (xx-x)/length * u * spread * roll + dome];
     };
-    const path = points => points.map(([x,y], i) => `${i ? 'L' : 'M'} ${x.toFixed(1)} ${y.toFixed(1)}`).join(' ');
-    for (const edge of [-1, 1]) {
-      const hem = Array.from({ length: 90 }, (_, i) => point(i / 89, edge + Math.sin(i * 1.35) * .042));
-      draw(path(hem), hue, .15, 6);
-      draw(path(hem), hue, .77, 2.1);
+    const outline = path(samples(99, t => point(t,-1)).concat(samples(99, t => point(1-t,1)))) + 'Z';
+    panel(hue, index, outline, dense);
+    const filaments = dense ? 42 : 24 + index % 4 * 3;
+    for (let j = 0; j < filaments; j++) {
+      const u = 2*j/(filaments-1) - 1;
+      const strand = path(samples(104, t => point(t, u + .019 * Math.sin(t * 104 + j * 1.6))));
+      draw(strand, j % 5 === 0 ? '#fff1f6' : hue, j % 5 === 0 ? .63 : .63 + .28 * Math.sin(j) ** 2, j % 5 === 0 ? .66 : 1);
     }
-    for (let filament = 0; filament < 24; filament++) {
-      const row = filament / 23 * 2 - 1;
-      const points = Array.from({ length: 45 }, (_, i) => point(i / 44, row));
-      draw(path(points), hue, filament % 6 ? .49 : .85, filament % 6 ? .85 : 1.48);
+    for (let j = 1; j < 77; j++) {
+      const t = (j + .29 * Math.sin(j * 1.4)) / 77;
+      draw(path(samples(23, u => point(t + .003 * Math.cos(u * 27 + j * .39), 2*u-1))),
+        j % 8 ? hue : '#fff4dd', dense ? .53 : .76, j % 8 ? .82 : .59);
     }
-    for (let stitch = 0; stitch < 52; stitch++) {
-      const t = stitch / 51;
-      draw(path(Array.from({ length: 9 }, (_, i) => point(t + (i - 4) * .0009, i / 4 - 1))), hue, .55, .85);
+  }
+
+  for (const [cx,cy,hue,size] of [[90,568,palette[0],49],[340,396,palette[2],50],[9,359,palette[2],47],[241,583,palette[7],33]]) {
+    for (let loop = 0; loop < 28; loop++) {
+      const angle = loop * 2.39996;
+      const span = size * (.5 + .46 * Math.sin(loop * 1.86) ** 2);
+      const curl = path(samples(46,t => {
+        const radius = span * Math.sin(Math.PI * t);
+        const twist = angle + .78 * Math.sin(t * tau);
+        return [cx + Math.cos(twist) * radius, cy + Math.sin(twist) * radius * 1.21];
+      }));
+      draw(curl,'#241337', .68, 4.5);
+      draw(curl,hue,.89, 2.9);
+      draw(curl,'#fff2eb',.56,.69);
     }
+  }
+  for (let i = 0; i < 14; i++) {
+    const x = 160 + i * 12;
+    const y = 698 + 47 * Math.sin(i * .57);
+    const end = i < 5 ? 1380 - i * 42 : 690 + (i - 5) * 36;
+    const ribbon = path(samples(106, t => [
+      x + (end - x) * t,
+      y * (1 - t) + (731 + 18 * Math.sin(i * .36)) * t
+        + Math.sin(t * 17 + i * .27) * (15 + 13 * Math.sin(t * Math.PI)) * Math.sin(t * Math.PI)
+    ]));
+    draw(ribbon, palette[i % palette.length], i < 5 ? .73 : .40, i < 5 ? 1.45 : .75);
   }
 }
 
