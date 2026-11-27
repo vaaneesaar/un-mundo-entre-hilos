@@ -104,7 +104,7 @@ const TextileLoom = (() => {
             const overUnder = Math.cos(crossing) * (.098 + thickness * .75 + gather * .026);
             // Relief peaks between columns and vanishes at the interlacing points.
             const pocket = Math.sin(crossing) ** 2;
-            const foldHeight = bundle * route.lift * (.18 + scale * .28);
+            const foldHeight = bundle * route.lift * (.24 + scale * .38);
             const relief = arc * (foldHeight * (.34 + pocket * .66)
               + pocket * (spread * .06 + lerp(start[2], end[2], t) * .08));
             return layout([x, y, lerp(lerp(start[2], end[2], t), warp.depthAt(x, y) + overUnder + relief, attachment)]);
@@ -225,7 +225,7 @@ const TextileLoom = (() => {
     let left = Infinity, right = -Infinity, bottom = Infinity, top = -Infinity;
     for (const fiber of mesh.ranges.values()) {
       if (fiber.retired) continue;
-      const margin = fiber.material === 'mesh' || fiber.material === 'band' ? .30 : fiber.radius * 2 + .075;
+      const margin = fiber.material === 'mesh' || fiber.material === 'band' ? .42 : fiber.radius * 2.7 + .075;
       for (const [x, y, z] of fiber.centers) {
         const cameraX = x + z * tilt;
         const cameraY = y - z * .28;
@@ -358,7 +358,8 @@ const TextileLoom = (() => {
       float grain = twist * crossgrain * mix(.10, .045, satin) + twist * .035;
       grain += expression * expressionFinish.z * crossgrain;
       float contact = .93 - bundled * (.15 + expression * expressionFinish.w) * (1.0 - keyLight);
-      float light = (.39 + keyLight * .56 + warm * .16 + grain) * contact;
+      float rim = pow(max(0.0, dot(n, normalize(vec3(.73, -.34, .59)))), 9.0);
+      float light = (.34 + keyLight * .60 + warm * .16 + grain) * contact;
       light *= clamp(.91 + vDepth * .14, .62, 1.22);
       light *= mix(1.21, .81, vWarp);
       float tone = clamp(dot(vColor, vec3(.22, .65, .13)) * .8 + .20 * sin(threadPhase * 2.1), 0.0, 1.0);
@@ -366,8 +367,9 @@ const TextileLoom = (() => {
         expressionHigh, smoothstep(.56, 1.0, tone));
       vec3 pigment = mix(vColor, tinted, expression * .76) * light + vec3(.045,.055,.10) * (1.0 - keyLight);
       pigment += vec3(.19,.17,.16) * warm * .2 + vec3(.76,.80,.92) * sheen * (.040 + satin * .10);
-      coverage *= 1.0 - open * .23;
-      pigment = mix(pigment, vec3(.93, .88, .99), max(vHighlight * .35, vEdited * .11));
+      pigment += vec3(.31, .40, .64) * rim * (.15 + bundled * .10) * (1.0 - vWarp);
+      coverage *= 1.0 - open * .18;
+      pigment = mix(pigment, vec3(.99, .82, .53), max(vHighlight * .36, vEdited * .11));
       gl_FragColor = vec4(pigment, coverage * .95);
     }
   `;
