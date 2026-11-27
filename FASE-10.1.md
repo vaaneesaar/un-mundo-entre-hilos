@@ -7,3 +7,9 @@ El ancho, la densidad longitudinal y el relieve se calculan a partir del recuent
 Al destacar un destino, cada banda separa las rutas coincidentes del contexto. Con Aislar solo se dibujan las coincidentes. Los indicadores siguen utilizando el conjunto completo que corresponda a cada consulta. La ficha muestra el total de la banda, su número de rutas y hasta tres conexiones con mayor recuento.
 
 La gasa, los orillos y su deformación comparten el ID de la banda y los buffers WebGL del telar. El tejido transversal y longitudinal se calcula en el shader sobre una superficie ondulada. El perfil de menor detalle simplifica los orillos en pantallas estrechas. Las figuras bordadas conservan su geometría por ruta.
+
+## Variación material
+
+Cada corredor combina perfiles procedurales según su posición en el bastidor. El tul usa dos direcciones de entramado y aberturas visibles. La cinta usa una urdimbre más cerrada y satinada. Los cordones reúnen tres cabos helicoidales y aparecen en tramos puntuales. Los hilos finos se separan del orillo siguiendo su propia profundidad. Los pliegues se forman con dos superficies curvadas que se superponen en un tramo corto.
+
+La escala de vuelos es compartida entre periodos. El número de rutas modula el ancho y la proporción de vuelos en la ruta más concurrida ajusta el grosor del cordón cuando está presente. La elección de familias, colores y posiciones de los pliegues es compositiva. Los componentes comparten el identificador de su corredor, el recuento y el desplazamiento con la aguja.
