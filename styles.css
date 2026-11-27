@@ -1225,3 +1225,4 @@ body:has(#cierre:not([hidden])) .method-footer summary { font-size: .75rem; }
 #loom-audio-status { color: var(--muted); }
 #loom-audio-control:not([data-enabled]) .audio-waves,
 #loom-audio-control[data-enabled] .audio-muted { display: none; }
+.screen-audio { position: absolute; z-index: 4; inset: .35rem .35rem auto auto; }

@@ -363,7 +363,7 @@ function initNavigation(loom) {
     document.body.classList.toggle('intro-view', next.id === 'inicio');
     document.querySelector('#method-footer').hidden = next.id === 'inicio';
     document.body.classList.toggle('loom-view', next.id === 'telar');
-    loom.setVisible(next.id === 'telar');
+    loom.setScreen(next);
     if (moveFocus) {
       next.querySelector('h1').focus({ preventScroll: true });
       window.scrollTo(0, 0);
@@ -615,6 +615,11 @@ function initDemoFlights() {
 
   const audioPanel = document.querySelector('#loom-audio-panel');
   const audioControl = document.querySelector('#loom-audio-control');
+  const audioActions = audioControl.parentElement;
+  const audioStage = audioPanel.parentElement;
+  const audioPanelNext = audioPanel.nextElementSibling;
+  const screenAudio = document.createElement('div');
+  screenAudio.className = 'screen-audio';
   const textileAudio = LoomAudio.mount(document.querySelector('#loom-audio-toggle'),
     document.querySelector('#loom-audio-volume'), document.querySelector('#loom-audio-status'), audioControl);
   const constructionPanel = sceneA.querySelector('.loom-construction');
@@ -1554,10 +1559,19 @@ function initDemoFlights() {
       restartExperience(false);
       loom.startConstruction();
     },
-    setVisible(value) {
-      visible = value;
-      textileAudio.setVisible(value);
-      if (!visible) closeExplorationPanels();
+    setScreen(screen) {
+      visible = screen.id === 'telar';
+      textileAudio.setScreen(screen.id);
+      if (audioPanel.matches(':popover-open')) audioPanel.hidePopover();
+      if (visible) {
+        audioActions.prepend(audioControl);
+        audioStage.insertBefore(audioPanel, audioPanelNext);
+        screenAudio.remove();
+      } else {
+        closeExplorationPanels();
+        screen.prepend(screenAudio);
+        screenAudio.append(audioControl, audioPanel);
+      }
       syncCanvases();
     }
   };

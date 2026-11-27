@@ -70,7 +70,7 @@ test('audio starts only after opt-in and bounds voices, drag and output while vi
   });
   const button = eventTarget(), volume = eventTarget(), status = {};
   const audio = mount(button, volume, status);
-  audio.setVisible(true);
+  audio.setScreen('telar');
   audio.setScene(Array.from({ length: 400 }, () => ({ flightCount: 100 })), 'day-a');
   audio.build(.7);
   assert.equal(Context.last, undefined);

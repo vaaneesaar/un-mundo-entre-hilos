@@ -8,6 +8,11 @@ const LoomAudio = (() => {
     anticipation: { decay: .37, cutoff: 2200, shade: .47, space: 1.08, bend: 13, pair: false },
     reunion:     { decay: .74, cutoff: 1650, shade: .41, space: 1.18, bend: -8, pair: true }
   };
+  const atmospheres = {
+    inicio: { decay: 1.42, cutoff: 1240, shade: .32, bend: 17, attack: .32, shift: .92, delay: 4600 },
+    cierre: { decay: 2.25, cutoff: 820, shade: .19, bend: -7, attack: .54, shift: .68, delay: 6900 }
+  };
+  const screenFade = .32;
   const limit = 5;
   const ceiling = .16;
   const clamp = (value, low, high) => Math.max(low, Math.min(high, value));
@@ -37,14 +42,15 @@ const LoomAudio = (() => {
   }
 
   function mount(button, volume, status, control) {
-    let audio, master, enabled = false, visible = false, generation = 0;
+    let audio, master, enabled = false, screen, pageActive = true, generation = 0;
+    let screenTimer;
     let ambientTimer, cueTimer, suspendTimer, lastGesture = -Infinity, lastTension = -Infinity;
     let viewKey = '', profile = describe([]), pendingRoutes, emotion = 'neutral', tension;
     let weaving = false, lastStage = -1;
     const voices = new Set();
     const reduced = matchMedia('(prefers-reduced-motion: reduce)');
-    const allowed = () => enabled && visible && !document.hidden;
-    const ready = () => allowed() && audio?.state === 'running';
+    const allowed = () => enabled && screen && pageActive && !document.hidden;
+    const ready = () => allowed() && screenTimer === undefined && audio?.state === 'running';
 
     function updateProfile() {
       if (!pendingRoutes) return;
@@ -57,7 +63,7 @@ const LoomAudio = (() => {
       button.textContent = enabled ? 'Silenciar sonido' : 'Activar sonido';
       status.textContent = enabled ? 'Sonido activado' : 'Sonido silenciado';
       control?.toggleAttribute('data-enabled', enabled);
-      control?.setAttribute('aria-label', 'Sonido del Telar, ' + (enabled ? 'activado' : 'silenciado'));
+      control?.setAttribute('aria-label', 'Sonido de la experiencia, ' + (enabled ? 'activado' : 'silenciado'));
     }
 
     function updateVolume() {
@@ -66,12 +72,13 @@ const LoomAudio = (() => {
       master.gain.setTargetAtTime(allowed() ? ceiling * amount : 0, audio.currentTime, .012);
     }
 
-    function stopVoice(voice, immediate = false) {
+    function stopVoice(voice, fade = .05) {
       if (voice.stopped) return;
       voice.stopped = true;
       const now = audio.currentTime;
-      voice.gain.gain.setTargetAtTime(.00001, now, .009);
-      for (const oscillator of voice.oscillators) oscillator.stop(now + (immediate ? .035 : .05));
+      voice.gain.gain.cancelAndHoldAtTime?.(now);
+      voice.gain.gain.setTargetAtTime(.00001, now, fade / 5);
+      for (const oscillator of voice.oscillators) oscillator.stop(now + fade);
     }
 
     function stopTension() {
@@ -84,7 +91,9 @@ const LoomAudio = (() => {
       clearTimeout(ambientTimer);
       clearTimeout(cueTimer);
       stopTension();
-      for (const voice of voices) stopVoice(voice, true);
+      clearTimeout(screenTimer);
+      screenTimer = undefined;
+      for (const voice of voices) stopVoice(voice, .035);
     }
 
     async function reconcile(preview = false) {
@@ -105,8 +114,8 @@ const LoomAudio = (() => {
       try {
         await audio.resume();
         if (id === generation && ready()) {
-          if (preview === true) note('resonancia', .15, 'preview');
-          planAmbient();
+          if (preview === true && screen === 'telar') note('resonancia', .15, 'preview');
+          planAmbient(preview === true);
         }
       } catch {
         if (id !== generation) return;
@@ -118,12 +127,13 @@ const LoomAudio = (() => {
 
     function newVoice(frequency, strength, duration, kind, shade = 1, pan = 0) {
       if (!ready() || voices.size >= limit) return;
-      const preset = presets[emotion];
+      const atmosphere = atmospheres[screen];
+      const preset = atmosphere ?? presets[emotion];
       const now = audio.currentTime;
       const gain = audio.createGain();
       const filter = audio.createBiquadFilter();
       filter.type = 'lowpass';
-      filter.frequency.value = preset.cutoff * (.79 + profile.concentration * .36);
+      filter.frequency.value = preset.cutoff * (atmosphere ? 1 : .79 + profile.concentration * .36);
       filter.Q.value = .32;
       filter.connect(gain);
       const panner = audio.createStereoPanner?.();
@@ -133,13 +143,14 @@ const LoomAudio = (() => {
         panner.connect(master);
       } else gain.connect(master);
       const sustained = kind === 'tension';
-      const partials = sustained ? [1, 2.008] : [1, 2.006, 3.013, 4.16].slice(0, Math.max(profile.layers, preset.pair ? 2 : 1));
+      const partials = atmosphere ? [1, 2.013, 3.08] : sustained ? [1, 2.008]
+        : [1, 2.006, 3.013, 4.16].slice(0, Math.max(profile.layers, preset.pair ? 2 : 1));
       const voice = { oscillators: [], gain, filter, kind, stopped: false };
       voices.add(voice);
-      const level = strength * (.85 + .15 * profile.concentration);
+      const level = strength * (atmosphere ? 1 : .85 + .15 * profile.concentration);
       gain.gain.setValueAtTime(.00001, now);
-      gain.gain.exponentialRampToValueAtTime(level, now + (sustained ? .075 : .023));
-      if (emotion === 'anticipation' && !sustained) {
+      gain.gain.exponentialRampToValueAtTime(level, now + (atmosphere?.attack ?? (sustained ? .075 : .023)));
+      if (!atmosphere && emotion === 'anticipation' && !sustained) {
         gain.gain.exponentialRampToValueAtTime(level * .26, now + .10);
         gain.gain.exponentialRampToValueAtTime(level * .64, now + .143);
       }
@@ -176,25 +187,29 @@ const LoomAudio = (() => {
     }
 
     function note(key, strength, kind, { shift = 1, shade = 1, pan = 0 } = {}) {
+      const atmosphere = atmospheres[screen];
       const root = 142 * 2 ** ((hash(String(key)) % 15) / 12);
-      const decay = presets[emotion].decay * (kind === 'ambient' ? 1.22 : 1);
-      newVoice(root * shift, strength, decay, kind, shade, pan);
+      const decay = (atmosphere ?? presets[emotion]).decay * (kind === 'ambient' ? 1.22 : 1);
+      newVoice(root * shift * (atmosphere?.shift ?? 1), strength, decay, kind, shade, pan);
     }
 
-    function planAmbient() {
+    function planAmbient(entering = false) {
       clearTimeout(ambientTimer);
-      if (!ready() || !profile.flights || weaving) return;
-      const delay = (4900 - 2700 * profile.density) * presets[emotion].space *
+      const atmosphere = atmospheres[screen];
+      if (!ready() || (!atmosphere && (!profile.flights || weaving))) return;
+      const spacing = atmosphere?.delay ?? (4900 - 2700 * profile.density) * presets[emotion].space;
+      const delay = atmosphere && entering ? 110 : spacing *
         (reduced.matches ? 1.35 : 1) * (.88 + Math.random() * .56);
       ambientTimer = setTimeout(() => {
         if (!ready() || weaving) return;
-        note(viewKey + Math.floor(Math.random() * 31), .062, 'ambient', { pan: Math.random() * .64 - .32 });
+        note((atmosphere ? screen : viewKey) + Math.floor(Math.random() * 31), atmosphere ? .084 : .062,
+          'ambient', { pan: Math.random() * .64 - .32 });
         planAmbient();
       }, delay);
     }
 
     function cue(kind) {
-      if (!ready()) return;
+      if (screen !== 'telar' || !ready()) return;
       clearTimeout(cueTimer);
       cueTimer = setTimeout(() => {
         if (!weaving && profile.flights)
@@ -223,16 +238,33 @@ const LoomAudio = (() => {
     volume.addEventListener('input', updateVolume);
     document.addEventListener('visibilitychange', reconcile);
     window.addEventListener('pagehide', () => {
-      visible = false;
+      pageActive = false;
       reconcile();
     });
     window.addEventListener('pageshow', () => {
-      visible = location.hash === '#telar';
+      pageActive = true;
       reconcile();
     });
 
     return {
-      setVisible(value) { visible = value; reconcile(); },
+      setScreen(next) {
+        if (screen === next) return;
+        const changing = screen && allowed() && audio?.state === 'running';
+        screen = next;
+        if (!changing) { reconcile(); return; }
+        clearTimeout(ambientTimer);
+        clearTimeout(cueTimer);
+        weaving = false;
+        lastStage = -1;
+        if (screenTimer !== undefined) return;
+        tension = undefined;
+        lastTension = -Infinity;
+        for (const voice of voices) stopVoice(voice, screenFade);
+        screenTimer = setTimeout(() => {
+          screenTimer = undefined;
+          planAmbient(true);
+        }, screenFade * 1000 + 35);
+      },
       setScene(routes, key) {
         if (key === viewKey) return;
         const previous = viewKey;
@@ -240,6 +272,7 @@ const LoomAudio = (() => {
         pendingRoutes = routes;
         if (!enabled) return;
         updateProfile();
+        if (screen !== 'telar') return;
         for (const voice of voices) if (voice.kind === 'ambient') stopVoice(voice);
         if (previous) cue('date');
         planAmbient();
@@ -247,11 +280,13 @@ const LoomAudio = (() => {
       setEmotion(id) {
         if (id === emotion) return;
         emotion = Object.hasOwn(presets, id) ? id : 'neutral';
+        if (screen !== 'telar') return;
         for (const voice of voices) if (voice.kind === 'ambient') stopVoice(voice);
         cue('emotion');
         planAmbient();
       },
       build(progress, outcome) {
+        if (screen !== 'telar') return;
         if (outcome) {
           if (weaving && outcome === 'complete' && profile.flights)
             note(viewKey + 'resolución', .18, 'resolve', { shift: 1.5, shade: .65 });
@@ -278,7 +313,7 @@ const LoomAudio = (() => {
       },
       gesture(kind, fiber, amount = 0) {
         if (kind === 'cancel') { stopTension(); return; }
-        if (!ready()) return;
+        if (screen !== 'telar' || !ready()) return;
         const key = fiber?.flightInfo?.routeId ?? fiber?.id ?? viewKey;
         if (kind === 'tension') {
           if (audio.currentTime - lastTension < .055) return;
