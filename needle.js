@@ -50,7 +50,7 @@ const TextileNeedle = (() => {
   const smooth = t => t * t * (3 - 2 * t);
   const significant = offset => Math.hypot(...offset) > .0001;
 
-  function mount(host, pick, wake, onSelect = () => {}, onEdit = () => {}, onCount = () => {}) {
+  function mount(host, pick, wake, onSelect = () => {}, onEdit = () => {}, onCount = () => {}, onGesture = () => {}) {
     const canvas = host.querySelector('canvas');
     const needle = host.querySelector('.needle-cursor');
     const card = host.querySelector('.thread-info');
@@ -114,6 +114,7 @@ const TextileNeedle = (() => {
 
     function clear() {
       const pointer = active?.pointer;
+      if (active) onGesture('cancel');
       if (selected) onSelect(null);
       point = hover = active = selected = null;
       phase = '';
@@ -143,7 +144,10 @@ const TextileNeedle = (() => {
       point = next;
       if (active) {
         active.offset = pointerOffset(active.start, point, active.scale, canvas.clientWidth, canvas.clientHeight);
-        if (significant(active.offset)) showCard(active.fiber, 'drag');
+        if (significant(active.offset)) {
+          showCard(active.fiber, 'drag');
+          onGesture('tension', active.fiber, Math.hypot(...active.offset));
+        }
       }
       showNeedle();
       wake();
@@ -173,6 +177,8 @@ const TextileNeedle = (() => {
         active = { pointer: event.pointerId, fiber, t: Math.fround(t), start, scale: unit, offset: [0, 0] };
       }
       showCard(fiber, active ? 'hold' : 'selected');
+      const crossing = hit.candidates?.some(candidate => candidate.fiber.id !== fiber.id && candidate.distance <= 3);
+      onGesture(crossing ? 'cross' : 'pluck', fiber);
       const { offsetWidth, offsetHeight } = card;
       const right = start.x > host.clientWidth / 2;
       const left = start.x + (right ? -offsetWidth - 12 : 20);
@@ -188,6 +194,7 @@ const TextileNeedle = (() => {
       const moved = Math.hypot(...held.offset) * held.scale >= 3;
       if (!moved) {
         active = null;
+        onGesture('cancel');
         if (canvas.hasPointerCapture(event.pointerId)) canvas.releasePointerCapture(event.pointerId);
         showCard(held.fiber, 'selected');
         showNeedle();
@@ -201,6 +208,7 @@ const TextileNeedle = (() => {
       edits.set(held.fiber.id, strokes);
       onEdit(held.fiber.id, strokes);
       onCount(edits.size, false);
+      onGesture('release', held.fiber);
       wake();
     }
 

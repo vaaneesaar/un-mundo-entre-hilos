@@ -5,21 +5,22 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#101B35">
   <title>Un mundo entre hilos</title>
-  <link rel="stylesheet" href="styles.css?v=panel-reactivo">
+  <link rel="stylesheet" href="styles.css?v=resonancias">
   <script src="flights.js?v=international" defer></script>
   <script src="destinations.js?v=country-filter" defer></script>
   <script src="materials.js?v=velo-textil" defer></script>
   <script src="embroidery.js?v=coleccion-figuras" defer></script>
-  <script src="needle.js?v=ficha-interpretativa" defer></script>
+  <script src="needle.js?v=resonancias" defer></script>
   <script src="interpretations.js?v=escenarios-hipoteticos" defer></script>
-  <script src="loom.js?v=retejido" defer></script>
+  <script src="loom.js?v=resonancias" defer></script>
   <script src="calendar.js?v=cobertura-diaria" defer></script>
   <script src="temporal.js?v=series-historicas" defer></script>
   <script src="providers.js?v=datos-abiertos" defer></script>
   <script src="historical.js?v=datos-abiertos" defer></script>
   <script src="travel-surveys.js?v=escenarios-hipoteticos" defer></script>
   <script src="scenarios.js?v=pulso-textil" defer></script>
-  <script src="script.js?v=cobertura-diaria" defer></script>
+  <script src="loom-audio.js?v=1" defer></script>
+  <script src="script.js?v=resonancias" defer></script>
 </head>
 <body>
   <header class="site-header">
@@ -235,6 +236,14 @@
       </div>
       <figure class="loom-stage">
         <div class="loom-actions">
+          <button class="button secondary loom-pause" type="button" id="loom-audio-control"
+            aria-label="Sonido del Telar, silenciado" title="Sonido del Telar" aria-expanded="false" popovertarget="loom-audio-panel">
+            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 9v6h4l5 4V5L7 9H3z"></path>
+              <path class="audio-waves" d="M15 10a3 3 0 0 1 0 4m3-7a7 7 0 0 1 0 10"></path>
+              <path class="audio-muted" d="m16 10 5 5m0-5-5 5"></path>
+            </svg>
+          </button>
           <button class="button secondary loom-reset" type="button" id="loom-reset" disabled>Restablecer hilos</button>
           <button class="button secondary loom-pause" type="button" id="loom-pause"
             aria-label="Pausar animación" title="Pausar animación" aria-keyshortcuts="Space" disabled>
@@ -246,6 +255,12 @@
             </svg>
           </button>
         </div>
+        <section id="loom-audio-panel" class="toolbar-popover" popover aria-label="La resonancia de los vínculos">
+          <strong>La resonancia de los vínculos</strong>
+          <button class="button secondary" type="button" id="loom-audio-toggle" aria-pressed="false">Activar sonido</button>
+          <label>Volumen <input id="loom-audio-volume" type="range" min="0" max="100" value="46"></label>
+          <small id="loom-audio-status" role="status">Sonido silenciado</small>
+        </section>
         <div class="loom-metric">
           <div class="loom-sample-metric" id="loom-sample-metric" hidden>
             <p><strong>—</strong> <span data-sample-label>Vuelos observados</span></p>

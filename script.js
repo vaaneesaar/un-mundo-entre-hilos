@@ -613,6 +613,10 @@ function initDemoFlights() {
       (result.status === 'unavailable' ? ' · ' + localSourceStatus : '');
   }
 
+  const audioPanel = document.querySelector('#loom-audio-panel');
+  const audioControl = document.querySelector('#loom-audio-control');
+  const textileAudio = LoomAudio.mount(document.querySelector('#loom-audio-toggle'),
+    document.querySelector('#loom-audio-volume'), document.querySelector('#loom-audio-status'), audioControl);
   const constructionPanel = sceneA.querySelector('.loom-construction');
   const skipConstruction = constructionPanel.querySelector('button');
   const selectedFibers = new Map();
@@ -627,6 +631,8 @@ function initDemoFlights() {
       constructionPanel.hidden = !active;
       if (!active && returnFocus) sceneA.querySelector('canvas').focus({ preventScroll: true });
     },
+    onWeave: textileAudio.build,
+    onGesture: textileAudio.gesture,
     onEdits(has) { editedA = has; syncReset(); },
     onPause(value) { paused = value; secondary?.setPaused(value); }
   });
@@ -652,7 +658,7 @@ function initDemoFlights() {
     sceneB.append(statusB);
     stage.append(sceneB);
     secondary = TextileLoom.mount(sceneB, [], statusB, emptyData, fiber => selectScenarioFiber(sceneB, fiber), {
-      secondary: true, onEdits(has) { editedB = has; syncReset(); }
+      secondary: true, onGesture: textileAudio.gesture, onEdits(has) { editedB = has; syncReset(); }
     });
     secondary.setComparison(true);
     secondary.setPaused(paused);
@@ -676,13 +682,15 @@ function initDemoFlights() {
   switchPane.addEventListener('click', () => { showingB = !showingB; syncCanvases(); });
   compactCompare.addEventListener('change', syncCanvases);
 
-  function anchorPopover(trigger, panel, alignEnd = false) {
+  function anchorPopover(trigger, panel, alignEnd = false, fitHeight = false) {
     function position() {
       if (!panel.matches(':popover-open')) return;
       const anchor = trigger.getBoundingClientRect();
       const width = panel.offsetWidth;
       const left = Math.max(8, Math.min(alignEnd ? anchor.right - width : anchor.left, document.documentElement.clientWidth - width - 8));
-      const top = anchor.bottom + 6;
+      const below = anchor.bottom + 6;
+      const top = fitHeight && below + panel.offsetHeight > document.documentElement.clientHeight - 8
+        ? Math.max(8, anchor.top - panel.offsetHeight - 6) : below;
       panel.style.setProperty('--panel-x', left + 'px');
       panel.style.setProperty('--panel-y', top + 'px');
     }
@@ -693,6 +701,7 @@ function initDemoFlights() {
     window.addEventListener('resize', position);
     window.addEventListener('scroll', position, { passive: true });
   }
+  anchorPopover(audioControl, audioPanel, true, true);
   const placePanel = document.querySelector('#place-panel');
   anchorPopover(document.querySelector('#place-toggle'), placePanel);
   const emotionPanel = document.querySelector('#emotion-panel');
@@ -920,6 +929,7 @@ function initDemoFlights() {
   function applyEmotion(id, animate = true) {
     const changed = id !== activeEmotion;
     activeEmotion = id;
+    textileAudio.setEmotion(id);
     const preset = LoomInterpretations.get(id);
     disclosure.hidden = id === 'neutral';
     emotionStory.open = false;
@@ -1046,6 +1056,9 @@ function initDemoFlights() {
     const eligible = routesFromOrigin(dataset);
     renderCountries(destination, eligible);
     const matches = LoomDestinations.connections(eligible, place, sense);
+    textileAudio.setScene(isDemo() ? [] : place ? matches.matched.values() : eligible,
+      JSON.stringify([dataset.routeSource, dataset.period.id, place?.id, sense, originCountry,
+        eligible.length, matches.flightCount]));
     restore.hidden = !place;
     direction.closest('label').hidden = false;
     direction.value = destination ? sense : 'both';
@@ -1268,6 +1281,7 @@ function initDemoFlights() {
       total.textContent = '—';
       emotionFacts.textContent = 'No se pudieron consultar los datos del periodo.';
       dataset = null;
+      textileAudio.setScene([], 'sin-datos');
       fields.count.textContent = 'Datos del periodo no disponibles';
       fields.period.textContent = '';
       renderScenario();
@@ -1395,7 +1409,7 @@ function initDemoFlights() {
   function closeExplorationPanels() {
     search.close();
     closeLoomFilters();
-    for (const panel of [placePanel, document.querySelector('#emotion-panel'), document.querySelector('#demo-calendar')]) {
+    for (const panel of [placePanel, audioPanel, document.querySelector('#emotion-panel'), document.querySelector('#demo-calendar')]) {
       if (panel.matches(':popover-open')) panel.hidePopover();
     }
   }
@@ -1542,6 +1556,7 @@ function initDemoFlights() {
     },
     setVisible(value) {
       visible = value;
+      textileAudio.setVisible(value);
       if (!visible) closeExplorationPanels();
       syncCanvases();
     }

@@ -708,11 +708,12 @@ const TextileLoom = (() => {
     let construction = 6, constructionWait = 0;
     let reweaveStart;
     const reweaveDuration = 1100;
-    function finishConstruction() {
+    function finishConstruction(completed = false) {
       if (construction === 6) return;
       construction = 6;
       insertion = 10;
       options.onConstruction?.(false);
+      options.onWeave?.(1, completed === true ? 'complete' : 'cancel');
       schedule();
     }
     let settled = new Set();
@@ -721,7 +722,7 @@ const TextileLoom = (() => {
     const pauseButton = options.secondary ? null : document.querySelector('#loom-pause');
     const needle = TextileNeedle.mount(host, pickFiber, schedule, onSelect, uploadEdit, (count, resetting) => {
       options.onEdits?.(!failed && count > 0 && !resetting);
-    });
+    }, options.onGesture);
     let editScratch = new Float32Array(0);
 
     function writeEdit(target, fiber, edit, start = 0) {
@@ -801,6 +802,7 @@ const TextileLoom = (() => {
     }
 
     function showFallback() {
+      if (reweaveStart !== undefined) options.onWeave?.(1, 'cancel');
       reweaveStart = undefined;
       finishConstruction();
       dispose();
@@ -982,13 +984,18 @@ const TextileLoom = (() => {
         if (motion.matches || constructionWait >= 9) finishConstruction();
         else if (data.routes.length || construction < 1.1) {
           construction += Math.min(delta, .05);
-          if (construction >= 5.65) finishConstruction();
+          if (construction >= 5.65) finishConstruction(true);
+          else if (data.routes.length) options.onWeave?.(construction / 5.65);
         }
       }
       if (reweaveStart === null) reweaveStart = now;
-      if (reweaveStart !== undefined && (motion.matches || now - reweaveStart >= reweaveDuration)) reweaveStart = undefined;
+      if (reweaveStart !== undefined && (motion.matches || now - reweaveStart >= reweaveDuration)) {
+        reweaveStart = undefined;
+        options.onWeave?.(1, motion.matches ? 'cancel' : 'complete');
+      }
       const reweaving = reweaveStart !== undefined;
       const progress = reweaving ? (now - reweaveStart) / reweaveDuration : 0;
+      if (reweaving) options.onWeave?.(progress);
       gl.uniform1f(uniforms.construction, reweaving ? .85 + progress * 4.8 : construction);
       gl.uniform1f(uniforms.reweaving, Number(reweaving));
       const underlay = reweaving ? 1 - .76 * Math.min(1, progress * 9) : 0;
@@ -1175,6 +1182,7 @@ const TextileLoom = (() => {
       },
       finishConstruction,
       restart() {
+        if (reweaveStart !== undefined) options.onWeave?.(1, 'cancel');
         reweaveStart = undefined;
         finishConstruction();
         if (paused) setPaused(false);
