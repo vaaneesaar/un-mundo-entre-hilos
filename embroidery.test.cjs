@@ -118,7 +118,7 @@ test('open mesh, bands and braids add component geometry under one addressable f
     const row = Math.floor(fiber.centers.length / 2);
     const start = fiber.vertexStart + row * perRing;
     for (let i = 0; i < perRing; i++) {
-      assert.equal(mesh.vertices[(start + i) * 19 + 9], Math.fround(row / (fiber.centers.length - 1)));
+      assert.equal(mesh.vertices[(start + i) * mesh.stride + 9], Math.fround(row / (fiber.centers.length - 1)));
     }
     assert.equal(mesh.byCode[fiber.code].id, fiber.id);
   }

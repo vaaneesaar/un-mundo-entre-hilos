@@ -545,7 +545,12 @@ function initDemoFlights() {
     const arrivals = new Set(result.routes.map(route => registry[route.destinationId].country));
     const departures = new Set(result.routes.map(route => registry[route.originId].country));
     const count = routeVolume(result.routes);
-    sampleMetric.querySelector('strong').textContent = result.routeSlots ? display(count) : '—';
+    const sampleCount = sampleMetric.querySelector('strong');
+    sampleCount.textContent = result.routeSlots ? display(count) : '—';
+    sampleCount.toggleAttribute('data-long-count', sampleCount.textContent.length > 8);
+    emotionFacts.textContent = result.routeSlots
+      ? `${sampleCount.textContent} ${isDemo() ? 'vuelos simulados' : 'vuelos observados'} · ${display(result.routes.length)} rutas disponibles en el periodo.`
+      : 'Sin rutas disponibles para este periodo.';
     sampleMetric.querySelector('[data-sample-detail]').textContent = result.routeSlots
       ? `${departures.size} países de salida · ${arrivals.size} de llegada · ${display(result.routes.length)} rutas · ${display(airports.size)} aeropuertos`
       : 'Sin rutas en la muestra para este periodo';
@@ -680,33 +685,190 @@ function initDemoFlights() {
   const emotionOptions = document.querySelector('#emotion-options');
   let activeEmotion = 'neutral';
   anchorPopover(emotionToggle, emotionPanel, true);
-  const treatments = {
-    nostalgia: ['#A38BE8', 'Lila y movimiento pausado'],
-    anticipation: ['#64B9F4', 'Azul vivo y pulso de anticipación'],
-    reunion: ['#F47FA6', 'Rosa cálido en los cruces'],
-    joy: ['#F7BF3B', 'Luz dorada y ritmo abierto'],
-    farewell: ['#8ED8FC', 'Luz fría y tramas que se separan'],
-    neutral: ['#DCDFFF', 'Volver al tejido original']
-  };
-  for (const [id, [color, description]] of Object.entries(treatments)) {
+  const emotionStory = disclosure.querySelector('details');
+  const emotionFacts = disclosure.querySelector('[data-emotion-facts]');
+  const scenarioCard = document.querySelector('#emotion-scenario');
+  const scenarioForm = document.querySelector('#scenario-form');
+  const scenarioInput = document.querySelector('#scenario-percent');
+  const scenarioClear = document.querySelector('#scenario-clear');
+  const scenarioResults = document.querySelector('#scenario-results');
+  const scenarioReference = document.querySelector('#scenario-reference');
+  const scenarioVariation = document.querySelector('#scenario-variation');
+  const scenarioAssumptions = new Map();
+  const scenarioDates = new Map();
+  const scenarioChart = document.querySelector('#scenario-chart');
+  const scenarioFormatter = new Intl.NumberFormat('es-MX', { maximumFractionDigits: 2 });
+  const scenarioPreview = document.querySelector('#emotion-scenario-preview');
+
+  function scenarioSample(result, place, sense) {
+    if (!result) return null;
+    const observed = !result.routeSlots ? null : place
+      ? LoomDestinations.connections(routesFromOrigin(result), place, sense).flightCount : routeVolume(result.routes);
+    return { observed, covered: result.routeSlots, slots: result.slots, type: result.period.type };
+  }
+  const signedScenario = value => (value > 0 ? '+' : '') + scenarioFormatter.format(value);
+  let scenarioRequest = 0, scenarioPeriod = '', scenarioSource;
+
+  function renderScenarioChart(period, bins, comparisonLabel = '') {
+    scenarioChart.hidden = !bins.some(bin => bin.quantity !== null);
+    if (scenarioChart.hidden) return;
+    const peak = Math.max(1, ...bins.map(bin => bin.quantity ?? 0));
+    document.querySelector('#scenario-chart-label').textContent = comparisonLabel || (period.type === 'day'
+      ? 'Escenario diario · siete días UTC alrededor de la fecha' : 'Escenario acumulado por tramo del periodo UTC');
+    const bars = document.createDocumentFragment();
+    const labels = document.createDocumentFragment();
+    for (const bin of bins) {
+      const bar = document.createElement('span');
+      const from = bin.label ?? new Date(bin.start).toISOString().slice(0, 10);
+      bar.style.setProperty('--bar-height', (bin.quantity ?? 0) / peak * 100 + '%');
+      bar.toggleAttribute('data-missing', bin.quantity === null);
+      const label = document.createElement('li');
+      label.textContent = from + ' · ' + (bin.quantity === null ? 'sin datos'
+        : scenarioFormatter.format(bin.quantity) + ' equivalentes' + (bin.coverage < bin.days ? ` · ${bin.coverage}/${bin.days} días` : ''));
+      bar.title = label.textContent;
+      bars.append(bar);
+      labels.append(label);
+    }
+    scenarioChart.querySelector('.scenario-bars').replaceChildren(bars);
+    scenarioChart.querySelector('ol').replaceChildren(labels);
+  }
+
+  function syncScenarioReference(period) {
+    if (scenarioSource === source && scenarioPeriod === period.id) return;
+    scenarioSource = source;
+    scenarioPeriod = period.id;
+    const remembered = scenarioReference.value;
+    scenarioDates.clear();
+    const unique = new Set([period.id]);
+    for (const day of source.dates) {
+      const option = LoomTime.interval(period.type, day, Number(period.start.slice(11, 13)));
+      if (unique.has(option.id)) continue;
+      unique.add(option.id);
+      scenarioDates.set(day, option);
+    }
+    scenarioReference.replaceChildren(...[...scenarioDates].map(([day, option]) => new Option(option.label, day)));
+    scenarioReference.disabled = !scenarioDates.size;
+    const earlier = [...scenarioDates].filter(([, option]) => option.start < period.start).at(-1)?.[0];
+    scenarioReference.value = scenarioDates.has(remembered) ? remembered : earlier ?? scenarioDates.keys().next().value ?? '';
+  }
+
+  async function renderScenario() {
+    const token = ++scenarioRequest;
+    const percent = scenarioAssumptions.get(activeEmotion) ?? null;
+    const enabled = percent !== null && !isDemo() && activeEmotion !== 'neutral';
+    const { place, sense } = routeScope();
+    const result = dataset;
+    const sample = enabled ? scenarioSample(result, place, sense) : null;
+    const current = LoomScenarios.quantity(sample?.observed ?? null, percent);
+    loom.setScenario(LoomScenarios.intensity(current ?? 0), Boolean(place));
+    if (secondary) {
+      const other = enabled && comparing ? scenarioSample(comparisonResult, place, sense) : null;
+      const equivalents = LoomScenarios.quantity(other?.observed ?? null, percent);
+      secondary.setScenario(LoomScenarios.intensity(equivalents ?? 0), Boolean(place));
+    }
+    scenarioPreview.hidden = !enabled;
+    scenarioCard.hidden = isDemo();
+    scenarioClear.hidden = percent === null;
+    scenarioResults.hidden = !enabled;
+    document.querySelector('#scenario-head').hidden = !enabled;
+    document.querySelector('#scenario-note').hidden = enabled;
+    if (!enabled) return;
+    const scopeLabel = place ? place.name + (sense === 'both' ? ' · llegadas y salidas'
+      : sense === 'arrivals' ? ' · llegadas' : ' · salidas') : 'Todos los países';
+    const headline = current === null ? 'Sin datos observados' : display(current) + ' equivalentes interpretativos';
+    const assumption = scenarioFormatter.format(percent) + ' % supuesto';
+    const preview = LoomInterpretations.get(activeEmotion).label + ' · ' + headline + ' · ' + assumption;
+    scenarioPreview.textContent = preview;
+    document.querySelector('#scenario-total').textContent = headline;
+    document.querySelector('#scenario-assumption').textContent = '· ' + assumption;
+    document.querySelector('#scenario-base').textContent = scopeLabel
+      + (sample?.observed != null ? ' · ' + display(sample.observed) + ' vuelos observados' : '');
+    document.querySelector('#scenario-source').textContent =
+      'Fuente de los vuelos: ' + (result?.provenance?.routes?.name ?? 'sin datos de rutas disponibles') + '.';
+    scenarioChart.hidden = true;
+    if (!result) scenarioReference.disabled = true;
+    scenarioVariation.textContent = 'Sin datos para calcular la variación.';
+    if (!result) return;
+    if (!place) renderScenarioChart(result.period, LoomScenarios.series(source.timeline, result.period, percent));
+    syncScenarioReference(result.period);
+    const compareWithB = comparing && comparisonResult;
+    const referencePeriod = compareWithB ? comparisonResult.period : scenarioDates.get(scenarioReference.value);
+    if (!referencePeriod) return;
+    scenarioVariation.textContent = 'Consultando el periodo de referencia…';
+    try {
+      const reference = compareWithB ? comparisonResult : await queries.read(referencePeriod, state.activity);
+      if (token !== scenarioRequest) return;
+      if (result.provenance?.routes?.name !== reference.provenance?.routes?.name) {
+        scenarioVariation.textContent = 'Fuentes distintas o cobertura sin verificar. Variación no disponible.';
+        return;
+      }
+      const other = scenarioSample(reference, place, sense);
+      const delta = LoomScenarios.compare(sample, other, percent);
+      if (!delta) {
+        scenarioVariation.textContent = 'Sin cobertura suficiente para calcular la variación.';
+        return;
+      }
+      const direction = delta.difference > 0 ? '↑' : delta.difference < 0 ? '↓' : '→';
+      const amount = direction + ' ' + signedScenario(delta.difference);
+      const percentage = delta.percent !== null ? ' (' + signedScenario(delta.percent) + ' %)' : '';
+      const unit = delta.normalized ? ' equivalentes por día con datos' : ' equivalentes';
+      const normalizedNote = delta.normalized
+        ? ' Los acumulados no son directamente comparables. A: ' + scenarioFormatter.format(delta.current) + unit + '.' : '';
+      scenarioVariation.textContent = 'Referencia: ' + scenarioFormatter.format(delta.reference) + unit
+        + '. ' + amount + unit + percentage + '.'
+        + (delta.percent === null ? ' Variación porcentual sin base positiva.' : '') + normalizedNote;
+      scenarioPreview.textContent = preview + ' · ' + amount + unit + percentage;
+      if (place || scenarioChart.hidden) {
+        const pair = [
+          { label: result.period.label, start: Date.parse(result.period.start), quantity: delta.current },
+          { label: reference.period.label, start: Date.parse(reference.period.start), quantity: delta.reference }
+        ].sort((a, b) => a.start - b.start);
+        renderScenarioChart(result.period, pair, delta.normalized ? 'Comparación por día con datos' : 'Comparación de periodos UTC');
+      }
+    } catch {
+      if (token === scenarioRequest) scenarioVariation.textContent = 'No se pudo consultar el periodo de referencia.';
+    }
+  }
+
+  scenarioForm.addEventListener('submit', event => {
+    event.preventDefault();
+    const percent = LoomScenarios.proportion(scenarioInput.value);
+    if (percent === null || isDemo() || activeEmotion === 'neutral') return;
+    scenarioAssumptions.set(activeEmotion, percent);
+    renderScenario();
+  });
+  scenarioClear.addEventListener('click', () => {
+    scenarioAssumptions.delete(activeEmotion);
+    scenarioInput.value = '';
+    renderScenario();
+  });
+  scenarioReference.addEventListener('change', renderScenario);
+
+  for (const [id, { label, color, summary }] of LoomInterpretations.presets) {
     const option = document.createElement('button');
     option.type = 'button';
     option.dataset.emotion = id;
     option.setAttribute('aria-pressed', String(id === activeEmotion));
     option.style.setProperty('--emotion-color', color);
     const name = document.createElement('strong');
-    name.textContent = LoomInterpretations.get(id).label;
-    const summary = document.createElement('span');
-    summary.textContent = description;
-    option.append(name, summary);
+    name.textContent = label;
+    const hint = document.createElement('span');
+    hint.textContent = summary;
+    option.append(name, hint);
     emotionOptions.append(option);
   }
   function applyEmotion(id) {
     activeEmotion = id;
     const preset = LoomInterpretations.get(id);
     disclosure.hidden = id === 'neutral';
-    disclosure.querySelector('strong').textContent = preset.label;
-    disclosure.querySelector('p').textContent = preset.description ?? '';
+    emotionStory.open = false;
+    scenarioInput.value = scenarioAssumptions.get(id) ?? '';
+    scenarioCard.open = scenarioAssumptions.has(id);
+    disclosure.querySelector('[data-emotion-active]').textContent = id === 'neutral' ? '' : preset.label;
+    disclosure.querySelector('[data-emotion-title]').textContent = preset.title ?? '';
+    disclosure.querySelector('[data-emotion-quote]').textContent = preset.quote ?? '';
+    disclosure.querySelector('[data-emotion-description]').textContent = preset.description ?? '';
+    emotionToggle.title = id === 'neutral' ? '' : 'Interpretación activa: ' + preset.label;
     for (const option of emotionOptions.children) {
       option.setAttribute('aria-pressed', String(option.dataset.emotion === id));
     }
@@ -714,6 +876,7 @@ function initDemoFlights() {
     for (const label of document.querySelectorAll('.thread-emotion span')) label.textContent = preset.label;
     loom.setEmotion(id);
     secondary?.setEmotion(id);
+    renderScenario();
   }
   emotionOptions.addEventListener('click', event => {
     const option = event.target.closest('button[data-emotion]');
@@ -736,8 +899,8 @@ function initDemoFlights() {
   function renderSurvey() {
     const start = dataset.period.start.slice(0, 10);
     const last = new Date(Date.parse(dataset.period.end) - 1).toISOString().slice(0, 10);
-    const next = LoomInterpretations.compatibleSurvey(state.destinationId, start);
-    const applicable = isDemo() && next === LoomInterpretations.compatibleSurvey(state.destinationId, last) ? next : undefined;
+    const next = TravelSurveys.compatibleSurvey(state.destinationId, start);
+    const applicable = isDemo() && next === TravelSurveys.compatibleSurvey(state.destinationId, last) ? next : undefined;
     if (applicable === survey) return;
     survey = applicable;
     emptySurvey.hidden = Boolean(survey);
@@ -806,14 +969,19 @@ function initDemoFlights() {
     countryPlaces.value = place.type === 'country' ? '' : place.id;
   }
 
+  function routeScope() {
+    const destination = catalog.get(state.destinationId);
+    const place = destination ?? catalog.get('country:' + originCountry);
+    const sense = destination ? (originCountry ? 'arrivals' : state.direction) : 'departures';
+    return { destination, place, sense };
+  }
+
   function renderDestination() {
     if (!dataset) return;
     renderSurvey();
-    const destination = catalog.get(state.destinationId);
-    const place = destination ?? catalog.get('country:' + originCountry);
+    const { destination, place, sense } = routeScope();
     const eligible = routesFromOrigin(dataset);
     renderCountries(destination, eligible);
-    const sense = destination ? (originCountry ? 'arrivals' : state.direction) : 'departures';
     const matches = LoomDestinations.connections(eligible, place, sense);
     context.hidden = !place;
     restore.hidden = !place;
@@ -858,6 +1026,7 @@ function initDemoFlights() {
           'Misma serie OpenSky y duración comparable · ' + sampleDifference(dataset, comparisonResult);
       }
     }
+    renderScenario();
     if (!place) return;
 
     const airportLabel = id => {
@@ -939,6 +1108,8 @@ function initDemoFlights() {
 
   async function reloadData() {
     const token = ++request;
+    ++scenarioRequest;
+    if (!scenarioResults.hidden) scenarioVariation.textContent = 'Consultando el periodo…';
     const showBoth = comparing;
     const difference = document.querySelector('#comparison-difference');
     const scaleNote = document.querySelector('#comparison-scale');
@@ -992,12 +1163,17 @@ function initDemoFlights() {
                 sampleDifference(a, b)
               : 'Misma serie OpenSky · cobertura o duración diferente; sin diferencia directa.')
             : 'Diferencia no disponible con esta cobertura. ';
-        scaleNote.textContent = scale ? ` · Trama acumulada: ≈ ${scale} vuelos de la muestra por hebra` : '';
+        scaleNote.textContent = source.historical
+          ? ' · Ambos telares usan la misma escala de vuelos acumulados.'
+          : scale ? ` · Trama acumulada: ≈ ${scale} vuelos de la muestra por hebra` : '';
       }
       renderDestination();
     } catch (error) {
       if (token !== request) return;
       total.textContent = '—';
+      emotionFacts.textContent = 'No se pudieron consultar los datos del periodo.';
+      dataset = null;
+      renderScenario();
       temporalNote.textContent = 'No se pudo consultar el periodo. Elige otra fecha para reintentar.';
       if (showBoth) {
         for (const panel of panels) renderComparisonPanel(panel, null, null, 'Periodo no disponible');
@@ -1016,7 +1192,7 @@ function initDemoFlights() {
     secondary?.clearEdits();
     reloadData();
   }
-  function setComparison(value) {
+  function setComparison(value, refresh = true) {
     comparing = value;
     showingB = false;
     comparisonPanel.hidden = !value;
@@ -1036,7 +1212,7 @@ function initDemoFlights() {
     loom.setComparison(value);
     syncReset();
     syncCanvases();
-    reloadData();
+    if (refresh) reloadData();
   }
   toggleCompare.addEventListener('click', () => setComparison(!comparing));
   periodSelect.addEventListener('change', () => { periodType = periodSelect.value; changeTime(); });
@@ -1099,13 +1275,14 @@ function initDemoFlights() {
     state = LoomDestinations.createState(realSource.dates[0] ?? defaultDay);
     originCountry = '';
     periodType = periodSelect.value = 'day';
-    if (comparing) setComparison(false);
+    if (comparing) setComparison(false, false);
     activity.value = state.activity;
     search.setValue(null);
-    context.open = false;
-    closeLoomFilters();
-    const emotions = document.querySelector('#emotion-panel');
-    if (emotions.matches(':popover-open')) emotions.hidePopover();
+    for (const details of stage.closest('#telar').querySelectorAll('details[open]')) details.open = false;
+    closeExplorationPanels();
+    scenarioAssumptions.clear();
+    scenarioPeriod = '';
+    scenarioReference.replaceChildren();
     applyEmotion('neutral');
     loom.clearEdits();
     secondary?.clearEdits();
@@ -1114,6 +1291,23 @@ function initDemoFlights() {
     mode.value = 'real';
     selectSource();
   }
+  function closeExplorationPanels() {
+    search.close();
+    closeLoomFilters();
+    for (const panel of [placePanel, document.querySelector('#emotion-panel'), document.querySelector('#demo-calendar')]) {
+      if (panel.matches(':popover-open')) panel.hidePopover();
+    }
+  }
+
+  const restartStatus = document.querySelector('#loom-restart-status');
+  let restartNoticeTimer;
+  document.querySelector('#loom-restart').addEventListener('click', () => {
+    restartExperience();
+    restartStatus.textContent = 'Exploración reiniciada';
+    clearTimeout(restartNoticeTimer);
+    restartNoticeTimer = setTimeout(() => { restartStatus.textContent = ''; }, 2400);
+  });
+
   function describeSources() {
     const provenance = document.querySelector('#flight-provenance');
     const entries = isDemo() ? [] : [source.historical ? dataset?.provenance?.routes : realSource.world,
@@ -1138,8 +1332,11 @@ function initDemoFlights() {
             : 'Muestra histórica local de OpenSky validada y cargada automáticamente.';
   }
   function selectSource() {
-    source = isDemo() ? demoSource : realSource;
-    queries = LoomTime.cache(source, source.historical ? 4 : 12);
+    const nextSource = isDemo() ? demoSource : realSource;
+    if (nextSource !== source) {
+      source = nextSource;
+      queries = LoomTime.cache(source, source.historical ? 4 : 12);
+    }
     updateHistoricalAirports();
     const place = catalog.get(state.destinationId);
     originCountry = '';
@@ -1231,15 +1428,7 @@ function initDemoFlights() {
     restartExperience,
     setVisible(value) {
       visible = value;
-      if (!visible) {
-        search.close();
-        closeLoomFilters();
-        const emotions = document.querySelector('#emotion-panel');
-        if (emotions.matches(':popover-open')) emotions.hidePopover();
-        if (placePanel.matches(':popover-open')) placePanel.hidePopover();
-        const calendar = document.querySelector('#demo-calendar');
-        if (calendar.matches(':popover-open')) calendar.hidePopover();
-      }
+      if (!visible) closeExplorationPanels();
       syncCanvases();
     }
   };

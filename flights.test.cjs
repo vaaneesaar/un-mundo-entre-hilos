@@ -128,3 +128,22 @@ test('historical ribbons partition directional routes and preserve exact totals 
   assert.equal(total(highlighted.filter(fiber => fiber.corridor.matched)), data.routes[0].flights);
   assert.equal(total(loom.buildFibers(data, quality, null, focus, 'isolate').weft), data.routes[0].flights);
 });
+
+test('geographic anchors bend the interior of a real-route band with its projected ends held at the warp', () => {
+  const sample = FlightData.getDemo(FlightData.days[0], 'medium');
+  const data = FlightData.toLoomData(sample);
+  const route = data.routes[0];
+  route.info.status = 'observed';
+  const quality = loom.qualityFor(1000);
+  const input = { ...data, routes: [route] };
+  const before = loom.buildFibers(input, quality).weft[0];
+  const alternative = Object.keys(data.anchors).find(id => id !== route.from && id !== route.to);
+  const after = loom.buildFibers({ ...input, anchors: { ...data.anchors, [route.to]: data.anchors[alternative] } }, quality).weft[0];
+  assert.equal(before.id, after.id);
+  assert.equal(before.corridor.flightCount, after.corridor.flightCount);
+  assert.equal(before.corridor.routes[0].to, after.corridor.routes[0].to);
+  assert.notDeepEqual(before.corridor.gathers, after.corridor.gathers);
+  assert.notDeepEqual(before.sample(.6), after.sample(.6));
+  const projectedX = ([x, , z]) => x + .26 * z;
+  for (const end of [0, 1]) assert.ok(Math.abs(projectedX(before.sample(end)) - projectedX(after.sample(end))) < 1e-10);
+});

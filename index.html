@@ -5,19 +5,21 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#101B35">
   <title>Un mundo entre hilos</title>
-  <link rel="stylesheet" href="styles.css?v=trama-suspendida">
+  <link rel="stylesheet" href="styles.css?v=conteo-interpretativo">
   <script src="flights.js?v=international" defer></script>
   <script src="destinations.js?v=country-filter" defer></script>
-  <script src="materials.js?v=trama-suspendida" defer></script>
+  <script src="materials.js?v=trama-temporal-v4" defer></script>
   <script src="embroidery.js?v=fase10" defer></script>
   <script src="needle.js?v=bandas2" defer></script>
-  <script src="interpretations.js?v=luz-textil" defer></script>
-  <script src="loom.js?v=trama-suspendida" defer></script>
+  <script src="interpretations.js?v=escenarios-hipoteticos" defer></script>
+  <script src="loom.js?v=anclajes-textiles" defer></script>
   <script src="calendar.js?v=fase10" defer></script>
   <script src="temporal.js" defer></script>
   <script src="providers.js?v=phase97" defer></script>
   <script src="historical.js?v=phase97" defer></script>
-  <script src="script.js?v=primer-hilo" defer></script>
+  <script src="travel-surveys.js?v=escenarios-hipoteticos" defer></script>
+  <script src="scenarios.js?v=conteo-interpretativo" defer></script>
+  <script src="script.js?v=conteo-interpretativo" defer></script>
 </head>
 <body>
   <header class="site-header">
@@ -112,7 +114,15 @@
           </svg>
           Ajustes
         </button>
+        <button class="button secondary" id="loom-restart" type="button"
+          aria-label="Reiniciar exploración" title="Reiniciar exploración">
+          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 11a8 8 0 1 0-2 6m2-12v6h-6"></path>
+          </svg>
+        </button>
       </div>
+      <p id="loom-restart-status" role="status" aria-atomic="true"></p>
       <div class="toolbar-popover" id="place-panel" popover="auto" aria-label="País y tipo de conexión">
         <label class="loom-filter country-filter"><span>País</span>
           <select id="flight-country" aria-label="País">
@@ -187,8 +197,10 @@
           </fieldset>
         </div>
       </aside>
-      <aside class="toolbar-popover emotion-panel" id="emotion-panel" popover="auto" aria-label="Emociones">
+      <aside class="toolbar-popover emotion-panel" id="emotion-panel" popover="auto" aria-labelledby="emotion-panel-title">
+        <h2 id="emotion-panel-title">Lo que nos mueve</h2>
         <div id="emotion-options"></div>
+        <p id="emotion-scenario-preview" hidden></p>
         <small>Interpretación artística de los vuelos observados.</small>
       </aside>
       <div class="comparison-controls" id="loom-comparison" hidden>
@@ -261,8 +273,45 @@
           </div>
         </details>
           <p id="visualization-note">Selecciona un país para descubrir su figura bordada.</p>
-          <div id="emotion-disclosure" role="status" hidden>
-            <small>Interpretación poética</small><strong></strong><p></p>
+          <div id="emotion-disclosure" hidden>
+            <p class="emotion-active" role="status">Interpretación poética <span data-emotion-active></span></p>
+            <details id="emotion-story">
+              <summary data-emotion-title></summary>
+              <blockquote data-emotion-quote></blockquote>
+              <dl>
+                <dt>Lo que sabemos</dt><dd data-emotion-facts></dd>
+                <dt>Lo que interpretamos</dt><dd data-emotion-description></dd>
+              </dl>
+              <small>Interpretación artística, no medición de emociones de pasajeros.</small>
+            </details>
+            <details id="emotion-scenario">
+              <summary>Conteo interpretativo · escenario hipotético</summary>
+              <p id="scenario-head" hidden><strong id="scenario-total"></strong> <span id="scenario-assumption"></span></p>
+              <form id="scenario-form">
+                <label for="scenario-percent">Tu supuesto (%)</label>
+                <input id="scenario-percent" type="number" min="0" max="100" step="any" inputmode="decimal" required>
+                <button type="submit">Aplicar supuesto</button>
+                <button id="scenario-clear" type="button" hidden>Quitar supuesto</button>
+              </form>
+              <div id="scenario-results" hidden>
+                <label for="scenario-reference">Periodo de referencia</label>
+                <select id="scenario-reference"></select>
+                <p id="scenario-variation" role="status"></p>
+                <p id="scenario-base"></p>
+                <figure id="scenario-chart" hidden>
+                  <figcaption id="scenario-chart-label"></figcaption>
+                  <div class="scenario-bars" aria-hidden="true"></div>
+                  <details><summary>Ver valores de la gráfica</summary><ol></ol></details>
+                </figure>
+                <p id="scenario-source"></p>
+                <details id="scenario-method">
+                  <summary>Cómo se calcula</summary>
+                  <p>Multiplicamos los vuelos observados de la selección por el supuesto y redondeamos el total a equivalentes enteros. El supuesto es el mismo en ambos periodos. Si difieren la duración o la cobertura, comparamos el promedio por día con datos antes de redondear.</p>
+                  <p>El inicio del tramo iluminado depende del identificador de la hebra. Su extensión e intensidad crecen con los equivalentes mediante la escala fija 0.90 × cantidad ÷ (cantidad + 8,000). Los acentos ilustran el escenario. OpenSky no mide emociones de pasajeros.</p>
+                </details>
+              </div>
+              <p id="scenario-note">Elige un porcentaje para simularlo sobre los vuelos observados.</p>
+            </details>
           </div>
         </div>
         <div class="loom-art" id="loom-art-a">
@@ -324,6 +373,7 @@
     </section>
     <footer class="method-footer" id="method-footer" hidden>
       <details><summary>Fuentes, metodología y créditos</summary>
+        <p>En Conexiones, el ancho, el relieve y la densidad de la trama usan una escala común de vuelos observados acumulados. Las coordenadas reales de cada aeropuerto se proyectan sobre un espacio abstracto. Los anclajes invisibles de salida y llegada distribuyen pliegues y relieves según la frecuencia de las rutas. Los matices cálidos y fríos se acentúan con el peso de las rutas internacionales hacia el oeste y hacia el este, respectivamente. El color base distingue corredores abstractos. Las emociones son interpretaciones artísticas.</p>
         <p><a href="https://zenodo.org/records/5815448">OpenSky Network · CC BY 4.0</a> aporta vuelos reconstruidos. La fecha corresponde a la primera observación UTC. <a href="https://ourairports.com/data/">OurAirports</a> aporta el catálogo geográfico.</p>
         <p>Contamos observaciones con origen y destino utilizables. Los días disponibles indican cobertura temporal de la muestra. Las rutas visibles son una selección limitada por el presupuesto gráfico.</p>
           <div class="loom-tally">

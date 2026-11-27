@@ -15,7 +15,7 @@ const LoomMaterials = (() => {
     const part = (side, depth, width, shade, turns = 0, phase = 0) =>
       ({ side, depth, radius: width, shade, turns, phase });
     if (typeof kind === 'object') {
-      const { lane, concentration, connectivity } = kind;
+      const { lane, concentration, connectivity, distance } = kind;
       const styles = [
         { width: .34, code: 5 }, { width: .24, code: 6 },
         { width: .14, code: 5, cord: [.14, .80] }, { width: .34, code: 5 },
@@ -23,10 +23,15 @@ const LoomMaterials = (() => {
         { width: .10, code: 5, cord: [.21, .73] }, { width: .25, code: 6 }
       ];
       const style = styles[lane];
-      const width = style.width * (.65 + .68 * strength + .12 * connectivity);
-      const parts = [{ ...part(0, 0, width, 1), gauze: true, code: style.code }];
+      const width = style.width * (.13 + 1.75 * strength ** 1.6 + .23 * connectivity);
+      if (strength < .22) {
+        return { kind: 'corridor', code: 7, steps: 64,
+          parts: [part(0, 0, radius, 1), { ...part(radius * 2, -.02, radius * .45, .73), loose: true, hem: true }] };
+      }
+      const code = (strength > .70 && lane % 3 !== 0) || (concentration > .09 && strength > .39) ? 6 : style.code;
+      const parts = [{ ...part(0, 0, width, 1), gauze: true, code }];
       const patch = [.20 + .05 * (lane % 4), .60 + .075 * (lane % 3)];
-      if (lane % 2 === 0 || lane === 5) {
+      if (strength > .54 && (lane % 2 === 0 || distance > .19)) {
         parts.push({ ...part(width * .18, .105, width * .68, .93), gauze: true, code: 6, window: patch });
       }
       for (const edge of [-1, 1]) {
@@ -35,14 +40,14 @@ const LoomMaterials = (() => {
       if (lod >= .8 || lane % 2 === 0) {
         parts.push({ ...part(width * .68, -.065, radius * .27, 1.1), code: 7, hem: true, loose: true });
       }
-      if (style.cord) {
+      if (style.cord && strength > .35) {
         const plyRadius = .013 + .014 * strength + .008 * concentration;
         for (let ply = 0; ply < 3; ply++) {
           parts.push({ ...part(plyRadius * 1.06, plyRadius * 1.18, plyRadius * 1.15, [.80, 1.01, 1.16][ply], 19, tau * ply / 3),
             cordSide: width * .57, code: 2, window: style.cord });
         }
       }
-      if (lane === 1 || lane === 3 || lane === 5 || lane === 7) {
+      if (strength > .57 && (lane % 2 === 1 || concentration > .10)) {
         const knot = .29 + (lane % 4) * .12;
         for (const side of [-1, 1]) {
           parts.push({ ...part(width * .32 * side, -.065, width * .62, side > 0 ? .91 : 1.08),

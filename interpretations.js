@@ -1,21 +1,35 @@
 const LoomInterpretations = (() => {
-  const neutral = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0];
-  const treatment = (palette, finish, grain, contrast, speed, amplitude, spread, crossing) => [
+  const neutral = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0];
+  const treatment = (palette, finish, grain, contrast, speed, mode) => [
     1, ...palette.flatMap(hex => hex.match(/../g).map(channel => parseInt(channel, 16) / 255)),
-    finish, grain, contrast, speed, amplitude, spread, crossing
+    finish, grain, contrast, speed, ...Array.from({ length: 4 }, (_, i) => Number(i === mode))
   ];
   const presets = new Map([
-    ['neutral', { label: 'Sin interpretación', values: neutral }],
-    ['joy', { label: 'Felicidad', description: 'La luz se abre entre los hilos. Los tonos cálidos y la seda luminosa celebran las conexiones que un viaje hace posibles.', values: treatment(
-      ['D16AB7', 'FF987A', 'FFE797'], .82, -.035, .02, 1.32, 1.55, .090, .043) }],
-    ['nostalgia', { label: 'Nostalgia', description: 'En lilas y violetas, los hilos toman un ritmo más lento. La distancia deja espacio para recordar lugares y personas.', values: treatment(
-      ['636F9E', 'B6A0DA', 'F0CFEB'], -.76, .067, -.025, .45, .52, .034, .025) }],
-    ['anticipation', { label: 'Expectativa', description: 'El azul eléctrico y los acentos dorados marcan un pulso de anticipación. Las fibras sugieren la tensión de lo que está por comenzar.', values: treatment(
-      ['474292', '64B9F4', 'F7BF3B'], .12, .072, .075, 1.25, 1.16, .021, .109) }],
-    ['reunion', { label: 'Reencuentro', description: 'Los rosas cálidos destacan los cruces. Las hebras parecen acercarse, como vínculos que vuelven a encontrarse.', values: treatment(
-      ['9977CC', 'F47FA6', 'FFDEAE'], .33, .035, .19, .88, 1.14, .042, .073) }],
-    ['farewell', { label: 'Despedida', description: 'Las tramas se separan con un pulso lento y un reflejo frío. Entre ellas queda el espacio de lo que se aleja.', values: treatment(
-      ['304F9E', '6FBBE4', 'D2E4FF'], -.28, .035, .09, .66, 1.10, .128, .047) }]
+    ['neutral', { label: 'Sin interpretación', color: '#DCDFFF', summary: 'Volver al tejido original', values: neutral }],
+    ['nostalgia', {
+      label: 'Nostalgia', title: 'Los hilos de la memoria', color: '#A38BE8', summary: 'Tul abierto y respiración lenta',
+      quote: 'Hay distancias que permanecen incluso después de regresar.',
+      description: 'El tul deja pasar más aire y las hebras del fondo se desvanecen suavemente, como recuerdos de vínculos que permanecen.',
+      values: treatment(['636F9E', 'B6A0DA', 'F0CFEB'], -.76, .025, -.035, .30, 0)
+    }],
+    ['joy', {
+      label: 'Felicidad', title: 'Los hilos de la celebración', color: '#F7BF3B', summary: 'Expansión y reflejos de seda',
+      quote: 'Algunos viajes comienzan con la emoción de lo que está por venir.',
+      description: 'Las capas se abren y las cintas recogen reflejos cálidos. Su ritmo evoca celebración y posibilidades.',
+      values: treatment(['D16AB7', 'FF987A', 'FFE797'], .92, -.04, .035, 1.08, 1)
+    }],
+    ['anticipation', {
+      label: 'Expectativa', title: 'Los hilos de lo posible', color: '#64B9F4', summary: 'Trama tensa y pulsos direccionales',
+      quote: 'Cada partida abre posibilidades que todavía no conocemos.',
+      description: 'La ondulación se recoge y un reflejo recorre algunas hebras. La tensión sugiere el instante previo a un viaje.',
+      values: treatment(['474292', '64B9F4', 'F7BF3B'], .32, .045, .05, .73, 2)
+    }],
+    ['reunion', {
+      label: 'Reencuentro', title: 'Los hilos que vuelven a unirse', color: '#F47FA6', summary: 'Cruces que acercan las capas',
+      quote: 'Hay viajes cuyo destino no es un lugar, sino alguien.',
+      description: 'En varios puntos las capas se acercan y el tejido se vuelve más visible, como un abrazo entre personas que vuelven a encontrarse.',
+      values: treatment(['9977CC', 'F47FA6', 'FFDEAE'], .38, .048, .14, .51, 3)
+    }]
   ]);
   const get = id => presets.get(id) ?? presets.get('neutral');
 
@@ -44,29 +58,5 @@ const LoomInterpretations = (() => {
     };
   }
 
-  /** @typedef {{surveyId:string, sourceId:string, surveyTitle:string, country:string,
-   * geographicCoverage:string, destinationId:string, referencePeriod:{start:string,end:string,label:string},
-   * population:string, sampleSize?:number, categories:{id:string,label:string,value:number}[],
-   * units:'percent'|'people', methodology:string, limitations:string,
-   * dataStatus:'synthetic'|'verified', sourceUrl?:string}} Survey
-   */
-  /** @type {Survey[]} */
-  const surveys = [{
-    surveyId: 'demo-mx-2026-01', sourceId: 'simulation-project', surveyTitle: 'Distribución ilustrativa de motivos',
-    country: 'MX', geographicCoverage: 'México · alcance nacional ilustrativo', destinationId: 'country:MX',
-    referencePeriod: { start: '2026-01-01', end: '2026-01-31', label: 'Enero de 2026' },
-    population: 'Personas viajeras de una población ficticia', units: 'percent', dataStatus: 'synthetic',
-    categories: [{ id: 'leisure', label: 'Ocio o vacaciones', value: 50 },
-      { id: 'business', label: 'Negocios', value: 20 },
-      { id: 'visits', label: 'Visitas a familiares o amigos', value: 30 }],
-    methodology: 'Valores creados por el proyecto para demostrar el control.',
-    limitations: 'Distribución del periodo completo, sin estimación diaria ni correspondencia con los vuelos del telar.'
-  }];
-  function compatibleSurvey(destinationId, day, sources = surveys) {
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return undefined;
-    return sources.find(survey => survey.destinationId === destinationId &&
-      survey.referencePeriod.start <= day && day <= survey.referencePeriod.end);
-  }
-
-  return { presets, get, transition, compatibleSurvey };
+  return { presets, get, transition };
 })();

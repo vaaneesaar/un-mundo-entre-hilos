@@ -119,7 +119,7 @@ const TextileLoom = (() => {
     return { fibers, omitted: allocation.omitted.length };
   }
 
-  const bandColors = ['#70CBFF', '#DCDFFF', '#FA91BB', '#84A9FF', '#AC8EF8', '#FFC269', '#59D1F2', '#E96DAD'];
+  const bandColors = ['#70CBFF', '#DCDFFF', '#FA91BB', '#84A9FF', '#AC8EF8', '#FF938A', '#59D1F2', '#E96DAD'];
   // Each path has a distinct silhouette and travels between foreground and background.
   const drapes = [
     [[1.48,1.78,.88,.28,.98,1.62,1.51], [-.54,-.64,.11,.63,-.28,-.35,.12]],
@@ -141,7 +141,54 @@ const TextileLoom = (() => {
       + .43 * u * (1 - u) * ((c - a) * (1 - u) - (d - b) * u);
   }
 
-  function historicalBands(routes, layout, focus, mode) {
+  // Fixed scale for every period and both comparison panels. The logarithm
+  // gives small counts room; the rational curve approaches 1 without clipping.
+  function textileMass(flights) {
+    const weight = Math.log1p(flights / 80);
+    const fineWeave = (1 + Math.tanh(3.2 * Math.log((flights + 80) / 3100))) / 2;
+    const layeredWeave = (1 + Math.tanh(1.15 * Math.log((flights + 80) / 85000))) / 2;
+    return .54 * weight / (weight + 3.8) + .22 * fineWeave + .24 * layeredWeave;
+  }
+
+  // The airport projection stays fixed. Spread each anchor onto adjacent
+  // warp columns so nearby airports influence the same section of the textile.
+  function depositAnchor(columns, anchor, weight, direction) {
+    const position = (anchor[0] + 4.85) / 9.7 * (columns.length - 1);
+    const start = Math.floor(position);
+    for (let i = Math.max(0, start - 1); i <= Math.min(columns.length - 1, start + 2); i++) {
+      const blend = Math.max(0, 1 - Math.abs(i - position) / 1.65) ** 2 * weight;
+      columns[i][0] += blend;
+      columns[i][1] += anchor[1] * blend;
+      columns[i][2] += (anchor[2] + direction * .40) * blend;
+    }
+  }
+
+  function describeCorridor(routes, anchors, total) {
+    const from = [0, 0, 0], to = [0, 0, 0];
+    const columns = Array.from({ length: 11 }, () => [0, 0, 0]);
+    let distance = 0, east = 0, international = 0;
+    for (const route of routes) {
+      const weight = route.flights / total;
+      const a = anchors[route.from], b = anchors[route.to];
+      for (let axis = 0; axis < 3; axis++) {
+        from[axis] += a[axis] * weight;
+        to[axis] += b[axis] * weight;
+      }
+      depositAnchor(columns, a, weight, -1);
+      depositAnchor(columns, b, weight, 1);
+      distance += route.distance * weight;
+      east += Math.tanh((b[0] - a[0]) / 1.4) * weight;
+      if (route.info.origin.country !== route.info.destination.country) international += weight;
+    }
+    const profile = columns.map(([density, height, relief]) => [
+      density / (density + .20), height / (density + .13), relief / (density + .13)
+    ]);
+    return { from, to, distance, east, international,
+      gathers: profile.map(column => column[0]), heights: profile.map(column => column[1]),
+      reliefs: profile.map(column => column[2]) };
+  }
+
+  function historicalBands(routes, anchors, layout, focus, mode, portrait) {
     const groups = new Map();
     const split = mode !== 'all';
     for (const route of routes) {
@@ -156,25 +203,54 @@ const TextileLoom = (() => {
       group.routes.push(route);
       group.flightCount += route.flights;
     }
-    return [...groups.values()].sort((a, b) => a.id.localeCompare(b.id)).map(group => {
+    const bands = [...groups.values()].sort((a, b) => a.lane - b.lane || Number(b.matched) - Number(a.matched));
+    const lanes = [bands.filter(band => !band.matched), bands.filter(band => band.matched)];
+    return bands.map(group => {
       const { lane, id, matched, flightCount, routes } = group;
       routes.sort((a, b) => b.flights - a.flights || a.id.localeCompare(b.id));
-      const strength = Math.min(1, Math.log1p(flightCount / 20) / Math.log1p(2400));
+      const strength = textileMass(flightCount);
       const concentration = routes[0].flights / flightCount;
-      const connectivity = Math.min(1, Math.log1p(routes.length) / Math.log(1201));
+      const connectivity = routes.length / (routes.length + 180);
+      const { from, to, distance, east, international, gathers, heights, reliefs } = describeCorridor(routes, anchors, flightCount);
       const [height, depth] = drapes[lane];
-      const phase = lane * 1.92;
-      const offset = matched ? 0 : -.105;
+      const phase = (lane * 1.92 + .8 * east + tau) % tau;
+      // Attach each corridor near the outer warp columns. Data can bend the
+      // interior, while the endpoints stay at the scale of the installation.
+      const left = -4.78 + (lane % 3) * .10;
+      const right = 4.78 - ((lane + 1) % 3) * .10;
+      const center = Math.tanh((from[0] + to[0]) / 5) * .46;
+      const layer = lanes[Number(matched)];
+      const sparse = layer.length < 5;
+      const index = layer.indexOf(group);
+      const laneHeight = layer.length > 1 ? lerp(1.60, -1.60, index / (layer.length - 1)) : 0;
+      const warm = rgb('#F461AA'), cool = rgb('#64C4FF');
+      const pigment = rgb(bandColors[lane]).map((channel, index) =>
+        lerp(channel, lerp(warm[index], cool[index], (1 + east) / 2),
+          international * .40) * (.78 + .22 * strength));
+      const color = '#' + pigment.map(channel => Math.round(channel * 255).toString(16).padStart(2, '0')).join('');
       return {
-        id, group: id, system: 'weft', corridor: { lane, matched, flightCount, routes }, material: { lane, concentration, connectivity },
-        phase, tension: strength, radius: .023, strength, steps: 84, color: bandColors[lane],
+        id, group: id, system: 'weft', corridor: { lane, matched, flightCount, routes, gathers },
+        material: { lane, concentration, connectivity, distance },
+        phase, tension: strength, radius: .012 + .023 * strength, strength, steps: 72, color,
         sample(t) {
-          const x = lerp(-4.85 + lane % 3 * .11, 4.88 - lane % 4 * .13, t);
           const lift = Math.sin(t * Math.PI);
-          const y = drapeAt(height, t) + offset + strength * lift * .042 * Math.sin(t * tau + phase);
-          const z = drapeAt(depth, t) * (.77 + .39 * strength)
-            + .19 * Math.sin(x * 1.48 + phase) * lift + (matched ? .12 : -.12);
-          return layout([x, y, z]);
+          // These are textile coordinates, not a geographic projection.
+          const x = lerp(left, right, t) + (center + .20 * east + .24 * distance * Math.sin(t * tau)) * lift;
+          const flow = t + .17 * east * lift;
+          const drape = drapeAt(height, flow);
+          // With fewer active corridors, give the real bands distinct height
+          // guides. A lone corridor crosses the frame on a broad diagonal.
+          const guide = !sparse ? drape * 1.12 : layer.length === 1
+            ? (lane % 2 ? 1 : -1) * 1.73 * Math.cos(t * Math.PI) + .28 * drape
+            : laneHeight + .37 * drape;
+          const y = guide + lift * (.28 * lerp(from[1], to[1], t) + .26 * drapeAt(heights, t)
+            + (.14 + .58 * distance) * Math.sin(t * tau + phase));
+          const z = drapeAt(depth, flow) * (.36 + strength * .88)
+            + .38 * lerp(from[2], to[2], t) + lift * .54 * drapeAt(reliefs, t)
+            + (.20 + distance * .65) * lift * Math.cos(t * tau + phase)
+            + (matched ? .17 : -.46);
+          const edgeOffset = portrait ? 0 : .26 * z * (1 - lift);
+          return layout([x - edgeOffset, 2.27 * Math.tanh(y / 2.02), z]);
         }
       };
     });
@@ -186,7 +262,7 @@ const TextileLoom = (() => {
       : [x, y, z];
     const warp = makeWarp(data, quality, layout);
     if (!embroidered && data.routes.length && data.routes[0].info && data.routes[0].info.status !== 'demo') {
-      return { warp: warp.fibers, weft: historicalBands(data.routes, layout, focus, mode), omitted: 0 };
+      return { warp: warp.fibers, weft: historicalBands(data.routes, data.anchors, layout, focus, mode, quality.portrait), omitted: 0 };
     }
     const { fibers: weft, omitted } = makeWeft(data, quality, layout, warp, focus);
     if (!embroidered) return { warp: warp.fibers, weft, omitted };
@@ -202,7 +278,7 @@ const TextileLoom = (() => {
     const active = [...systems.warp, ...systems.weft, ...(systems.supports ?? [])];
     const activeIds = new Set(active.map(fiber => fiber.id));
     const retiring = [...prior.values()].filter(fiber => !activeIds.has(fiber.id) &&
-      (fiber.system === 'support' || (fiber.system === 'weft' && settled.has(fiber.id))));
+      (fiber.system === 'support' || (fiber.system === 'weft' && (fiber.corridor || settled.has(fiber.id)))));
     const fibers = [...active, ...retiring];
     const entering = systems.weft.filter(fiber => !settled.has(fiber.id));
     const groups = new Map();
@@ -219,7 +295,7 @@ const TextileLoom = (() => {
         if (lane[row]) timings.set(lane[row].id, .32 + 4.9 * order++ / Math.max(1, entering.length));
       }
     }
-    const stride = 19;
+    const stride = 20;
     const sides = quality.portrait ? 4 : 5;
     const surfaces = fibers.map(fiber => LoomMaterials.profile(fiber.material, fiber.radius, fiber.strength, quality.lod));
     const segmentCounts = fibers.map((fiber, index) => Math.max(fiber.steps, surfaces[index].steps));
@@ -242,7 +318,16 @@ const TextileLoom = (() => {
       const basePhase = fiber.phase % tau + surface.code * 8;
       const retired = !activeIds.has(fiber.id);
       const previousFiber = prior.get(fiber.id);
-      const delay = timings.get(fiber.id) ?? -10;
+      const changingBand = fiber.corridor && previousFiber?.corridor;
+      const oldWidth = changingBand ? previousFiber.surfaceWidth ?? surface.parts[0].radius : surface.parts[0].radius;
+      const widthRatio = oldWidth / surface.parts[0].radius;
+      const oldTension = changingBand ? previousFiber.tension : fiber.tension;
+      const oldColors = surface.parts.map(part => {
+        const [r, g, b] = rgb(changingBand ? previousFiber.color : fiber.color)
+          .map(channel => Math.min(255, Math.round(channel * part.shade * 255)));
+        return r * 65536 + g * 256 + b;
+      });
+      const delay = fiber.corridor ? -10 : timings.get(fiber.id) ?? -10;
       const direction = fiber.system === 'weft' ? 1 : fiber.system === 'support' ? .25 : 0;
       for (let i = 0; i <= steps; i++) {
         const t = i / steps;
@@ -256,11 +341,15 @@ const TextileLoom = (() => {
             + .29 * Math.sin(t * 14 + fiber.phase * .71) : 0;
         const across = horizontal.map((n, k) => n * Math.cos(roll) + perpendicular[k] * Math.sin(roll));
         const normal = cross(tangent, across);
+        const gather = fiber.corridor ? Math.max(0, drapeAt(fiber.corridor.gathers, t)) : 0;
+        // Adapt the closing textiles' irregular hems, local gathering and
+        // cloth dome to the existing panoramic band surfaces.
         const widthAt = fiber.corridor ? (.62 + .42 * Math.sin(t * Math.PI) + .23 * Math.sin(t * 14 + fiber.phase))
-          * (.52 + .48 * Math.min(1, Math.min(t, 1 - t) * 8)) : 1;
+          * (.52 + .48 * Math.min(1, Math.min(t, 1 - t) * 8)) * (1 - .20 * gather) : 1;
         const texture = .96 + .07 * Math.sin(t * 74 + fiber.phase) + .05 * Math.sin(t * 38);
         for (const [partIndex, part] of surface.parts.entries()) {
           const [sideOffset, depthOffset] = LoomMaterials.offset(part, t);
+          const packedColor = oldColors[partIndex];
           const taper = part.window ? Math.max(0, Math.min(1, (t - part.window[0]) * 22, (part.window[1] - t) * 22)) : 1;
           const radius = part.radius * (part.gauze ? 1 : texture) * taper;
           for (let j = 0; j <= sides; j++) {
@@ -272,14 +361,18 @@ const TextileLoom = (() => {
               ? normalize(normal.map((n, k) => -n + across[k] * edge * .42))
               : across.map((n, k) => n * c + normal[k] * s);
             const fray = part.gauze
-              ? 1 + .047 * Math.sin(t * 99 + edge * 5 + fiber.phase) * edge ** 2 : 1;
+              ? 1 + (.076 * Math.sin(t * 89 + fiber.phase + edge * 4)
+                + .045 * Math.cos(t * 173 + edge * 7)) * edge ** 2 : 1;
             const acrossDistance = (sideOffset + (part.gauze ? radius * edge * fray : 0)) * widthAt;
             const fold = part.fold ? part.fold * Math.sin(t * 85) * radius * .68 : 0;
-            const depth = depthOffset + (part.gauze ? (1 - edge ** 2) * radius * (.54 + .27 * Math.sin(t * 20 + fiber.phase)) + edge * fold : 0);
+            const depth = depthOffset + (part.gauze ? (1 - edge ** 2) * radius * (.54 + .33 * Math.sin(t * 12 + fiber.phase) + .32 * gather) + edge * fold : 0);
             const point = centers[i].map((n, k) =>
               n + (part.gauze ? 0 : radius * surfaceNormal[k]) + across[k] * acrossDistance + normal[k] * depth);
             vertices.set([...point, ...surfaceNormal, ...colors[partIndex],
-              t, u, part.code === undefined ? basePhase : fiber.phase % tau + part.code * 8, delay, direction, fiber.tension, ...delta, Number(retired)], cursor);
+              t, u, part.code === undefined ? basePhase : fiber.phase % tau + part.code * 8,
+              delay, direction, fiber.tension, packedColor,
+              ...delta.map((d, k) => d + (point[k] - centers[i][k]) * (widthRatio - 1)),
+              Number(retired) * 2 + oldTension], cursor);
             cursor += stride;
           }
         }
@@ -296,20 +389,21 @@ const TextileLoom = (() => {
           }
         }
       }
-      const record = { ...fiber, previousSample: previousFiber?.sample, retired, code, centers, delay, vertexStart: base, vertexCount: (steps + 1) * ringSize, first, count: indexCursor - first };
+      const record = { ...fiber, previousSample: previousFiber?.sample, surfaceWidth: surface.parts[0].radius, retired, code, centers, delay, vertexStart: base, vertexCount: (steps + 1) * ringSize, first, count: indexCursor - first };
       ranges.set(fiber.id, record);
       byCode.push(record);
     }
     const lastActive = byCode[active.length];
     const activeIndexCount = lastActive ? lastActive.first + lastActive.count : 0;
-    return { vertices, indices, ranges, byCode, vertexCount, activeIndexCount };
+    return { vertices, indices, ranges, byCode, vertexCount, activeIndexCount, stride };
   }
 
-  function projectedBounds(mesh, portrait) {
+  function projectedBounds(mesh, portrait, keepFrame = false) {
     const tilt = portrait ? .16 : .26;
     let left = Infinity, right = -Infinity, bottom = Infinity, top = -Infinity;
     for (const fiber of mesh.ranges.values()) {
       if (fiber.retired) continue;
+      if (keepFrame && fiber.system !== 'warp') continue;
       const margin = fiber.material === 'mesh' || fiber.material === 'band' || fiber.corridor ? .64 : fiber.radius * 2.7 + .075;
       for (const [x, y, z] of fiber.centers) {
         const cameraX = x + z * tilt;
@@ -327,7 +421,7 @@ const TextileLoom = (() => {
     attribute vec3 point, normal, color;
     attribute vec2 yarn;
     attribute float phase;
-    attribute vec3 stitch;
+    attribute vec4 stitch;
     attribute vec4 fiberEdit;
     attribute vec4 previousPosition;
     uniform mediump float morph;
@@ -337,10 +431,11 @@ const TextileLoom = (() => {
     uniform float editWeight;
     uniform float highlight;
     uniform float time, portrait, insertion, moving;
-    uniform vec3 expressionMotion;
-    uniform vec2 expressionGesture;
+    uniform mediump float expressionClock;
+    uniform mediump vec4 expressionModes;
     varying vec3 vNormal, vColor;
     varying vec2 vYarn, vCode;
+    varying mediump float vScenarioOffset;
     varying float vHighlight, vRetired, vWarp, vEdited;
     varying float vDepth, vPhase, vEntry, vTension;
     float pullInfluence(float t, float anchor, float magnitude) {
@@ -352,12 +447,12 @@ const TextileLoom = (() => {
     }
     void main() {
       vec3 p = point + previousPosition.xyz * (1.0 - morph);
-      vRetired = previousPosition.w;
+      vRetired = step(2.0, previousPosition.w);
       float fromEdge = stitch.y < 0.0 ? 1.0 - yarn.x : yarn.x;
       float age = insertion - stitch.x - fromEdge * 1.65;
       float slack = exp(-max(age, 0.0) * 4.0);
       float envelope = sin(yarn.x * 3.14159);
-      float tension = stitch.z;
+      float tension = mix(previousPosition.w - 2.0 * vRetired, stitch.z, morph);
       float threadPhase = mod(phase, 8.0);
       float localWave = sin(time * (1.15 + tension * .65) + threadPhase + yarn.x * 6.0);
       float pulse = sin(time * 2.4 - fromEdge * 12.0 + threadPhase);
@@ -372,14 +467,27 @@ const TextileLoom = (() => {
       float ambient = moving * .25;
       p.y += ambient * envelope * (.0015 + .002 * (1.0 - tension)) * localWave;
       p.z += ambient * envelope * (.002 * pulse + threaded * slack * .004 * localWave);
-      // Keep the structural warp, anchored ends and hand-placed sections steady.
-      float expression = expressionMotion.x * threaded * moving * envelope *
-        (grabbed ? 0.0 : 1.0 - vEdited);
-      float accent = sin(expressionMotion.y + threadPhase + yarn.x * 15.0);
-      float spread = sin(expressionMotion.y + threadPhase * .43);
-      float crossing = sin(expressionMotion.y - fromEdge * 11.0 + threadPhase);
-      p.y += expression * expressionGesture.x * (spread + .20 * accent);
-      p.z += expression * expressionMotion.z * (.008 * accent + expressionGesture.y * crossing);
+      // The fixed endpoints and hand-placed sections stay steady. Only the
+      // reversible interior gesture is evaluated here, including during picking.
+      float freedom = threaded * envelope * (grabbed ? 0.0 : 1.0 - vEdited);
+      float rhythm = expressionClock;
+      float join = max(exp(-pow(abs(yarn.x - .32) * 10.0, 2.0)),
+        exp(-pow(abs(yarn.x - .72) * 10.0, 2.0)));
+      float lower = sin(threadPhase + yarn.x * 7.0);
+      float lift = sin(threadPhase * .65 + yarn.x * 10.0 - rhythm);
+      float wave = sin(rhythm + yarn.x * 8.0 + threadPhase);
+      float lateral = dot(expressionModes, vec4(
+        -.09 * p.y + .045 * lower + moving * .044 * wave,
+        .17 * p.y + .12 * lower + moving * .24 * lift,
+        -.25 * p.y + .13 * (yarn.x - .5) + moving * .027 * sin(yarn.x * 38.0 - rhythm * 2.0),
+        -.29 * p.y * join + moving * .072 * wave * join));
+      float layering = dot(expressionModes, vec4(
+        -.27 * p.z + moving * .045 * wave,
+        .34 * p.z + .17 * lower + moving * .22 * lift,
+        -.46 * p.z + .085 * lower + moving * .045 * lift,
+        -.73 * p.z * join + .18 * lower * join + moving * .09 * wave * join));
+      p.y += freedom * lateral;
+      p.z += freedom * layering;
       float tilt = mix(.26, .16, portrait);
       if (threaded > .5 && dot(displacement, displacement) > .0000001) {
         float depth = (displacement.x - displacement.y) * .14;
@@ -390,8 +498,11 @@ const TextileLoom = (() => {
       vCode = vec2(mod(fiberCode, 256.0), floor(fiberCode / 256.0)) / 255.0;
       vHighlight = threaded > .5 && abs(fiberCode - highlight) < .25 ? 1.0 : 0.0;
       vNormal = normal;
-      vColor = color;
+      vec3 previousColor = vec3(floor(stitch.w / 65536.0),
+        floor(mod(stitch.w, 65536.0) / 256.0), mod(stitch.w, 256.0)) / 255.0;
+      vColor = mix(previousColor, color, morph);
       vYarn = yarn;
+      vScenarioOffset = fiberEdit.w;
       vDepth = camera.z;
       vPhase = phase;
       vTension = tension;
@@ -400,13 +511,16 @@ const TextileLoom = (() => {
   `;
   const fragmentSource = `
     precision mediump float;
-    uniform float picking, layerProgress, layerWidth, embroideryPass;
+    uniform float picking, layerProgress, layerWidth, embroideryPass, scenarioShare;
     uniform sampler2D layerTexture;
     uniform vec3 expressionLow, expressionMid, expressionHigh;
     uniform vec4 expressionFinish;
+    uniform mediump vec4 expressionModes;
+    uniform mediump float expressionClock;
     uniform mediump float morph;
     varying vec3 vNormal, vColor;
     varying vec2 vYarn, vCode;
+    varying mediump float vScenarioOffset;
     varying float vHighlight, vRetired, vWarp, vEdited;
     varying float vDepth, vPhase, vEntry, vTension;
     void main() {
@@ -421,7 +535,7 @@ const TextileLoom = (() => {
         gl_FragColor = vec4(vCode, vYarn.x, 1.0);
         return;
       }
-      if (embroideryPass > .5 && abs(layer.a - (embroideryPass - 1.0)) > .5) discard;
+      if (embroideryPass > .5 && abs(step(.75, layer.a) - (embroideryPass - 1.0)) > .5) discard;
       coverage *= mix(layer.r, layer.g, layerProgress);
       if (coverage <= .01) discard;
       // The free ends recede, while the central warp retains enough contrast to read at crossings.
@@ -440,22 +554,35 @@ const TextileLoom = (() => {
         gl_FragColor = vec4(vColor * (worn + grain * .16) + vec3(.12,.10,.15) * max(0.0, n.z), coverage * .96);
         return;
       }
+      vec4 gestures = expressionModes * (1.0 - vWarp);
+      float join = max(exp(-pow(abs(vYarn.x - .32) * 10.0, 2.0)),
+        exp(-pow(abs(vYarn.x - .72) * 10.0, 2.0)));
+      float shuttle = .5 + .5 * cos(vYarn.x * 18.849556 - expressionClock + threadPhase * .24);
+      float pulseLight = pow(shuttle, 9.0) * smoothstep(.35, .78, fract(threadPhase * .41));
+      float celebration = pow(.5 + .5 * cos(vYarn.x * 23.0 + threadPhase * 1.6 - expressionClock), 6.0);
       float clothEdge = 0.0;
       if (gauze || ribbon || fold) {
         // A flattened shell carries the woven surface. Its UVs, picking and pull use the same buffer.
         float u = vYarn.y;
-        float warpCount = mix(13.0, 26.0, vTension) * (ribbon ? 1.25 : 1.0);
-        float across = u * warpCount + .20 * sin(vYarn.x * 28.0 + threadPhase) + .11 * sin(vYarn.x * 73.0 + u * 3.5);
-        float along = vYarn.x * (123.0 + 28.0 * sin(threadPhase * .37)) + .35 * sin(u * 6.2 + threadPhase + vYarn.x * 12.0);
-        float longitudinal = 1.0 - smoothstep(.025, .25, abs(fract(across) - .5));
-        float transverse = 1.0 - smoothstep(.015, .20, abs(fract(along) - .5));
+        float warpCount = mix(5.0, 36.0, vTension) * (ribbon ? 1.25 : 1.0);
+        float across = u * warpCount + .24 * sin(vYarn.x * 28.0 + threadPhase)
+          + .17 * sin(vYarn.x * 104.0 + u * 8.0 + threadPhase);
+        float along = vYarn.x * (mix(34.0, 195.0, vTension) + 14.0 * sin(threadPhase * .37)) + .35 * sin(u * 6.2 + threadPhase + vYarn.x * 12.0)
+          + .23 * cos(u * 27.0 + vYarn.x * 37.0 + threadPhase);
+        float longitudinal = 1.0 - smoothstep(.025, .25, abs(fract(across) - .5) * (1.0 + gestures.x * .38 - gestures.y * .20));
+        float transverse = 1.0 - smoothstep(.015, .20, abs(fract(along) - .5) * (1.0 + gestures.x * .68 + gestures.z * .45 - gestures.w * .33 * join));
         float warpThread = longitudinal * (.83 + .17 * cos(along * 3.14159));
         float weftThread = transverse * (.82 + .18 * sin(across * 3.14159));
         float cloth = max(warpThread, weftThread);
-        clothEdge = smoothstep(.38, .50, abs(u - .5));
+        float pearl = 1.0 - step(.9, mod(floor(across + .5), 5.0));
+        clothEdge = pearl * longitudinal;
+        clothEdge = .20 * clothEdge + .80 * smoothstep(.38, .50, abs(u - .5));
         float filament = ribbon ? .17 + .67 * longitudinal + .11 * transverse : .027 + .68 * cloth;
         coverage *= (filament + clothEdge * .105) * (.83 + .17 * sin(across * 3.14159 + along * 3.14159));
+        coverage *= mix(.55, 1.06, vTension);
         if (fold) coverage *= .73;
+        coverage *= 1.0 + gestures.y * .20 * longitudinal + gestures.z * .17 * clothEdge
+          + gestures.w * .24 * join;
         if (coverage < .026) discard;
       }
       float keyLight = max(0.0, dot(n, normalize(vec3(-.44, .70, .63))));
@@ -465,6 +592,9 @@ const TextileLoom = (() => {
       float bundled = step(1.5, kind);
       float open = step(2.5, kind) * (1.0 - step(3.5, kind)) + (1.0 - step(.25, abs(kind - 5.0)));
       float expression = expressionFinish.x * (1.0 - vWarp);
+      float fade = mix(.56, .88, smoothstep(-.9, .75, vDepth));
+      coverage *= mix(1.0, fade, gestures.x);
+      if (fold || abs(kind - 7.0) < .25) coverage *= 1.0 - .36 * gestures.x;
       satin = clamp(satin + expression * expressionFinish.y, 0.0, 1.0);
       float sheen = pow(max(0.0, dot(n, normalize(vec3(-.24, .28, .93)))), mix(7.0, 18.0, satin));
       float twist = sin(vYarn.x * 360.0 + vYarn.y * 18.85 + threadPhase);
@@ -490,8 +620,26 @@ const TextileLoom = (() => {
       pigment += (gauze || ribbon || fold ? 1.0 : 0.0) * vColor *
         (.12 * clothEdge + .12 * warm + .08 * sheen) * radiance;
       coverage *= 1.0 - open * (.22 - .11 * backlight);
+      pigment *= 1.0 - .16 * gestures.x;
+      pigment += vec3(1.0, .74, .43) *
+        (gestures.y * (.09 * satin + .21 * celebration * (.4 + .6 * sheen))
+        + gestures.w * .21 * join * (.32 + .68 * max(clothEdge, sheen)));
+      pigment += vec3(.69, .87, 1.0) * gestures.z * (.23 * pulseLight + .13 * clothEdge);
       pigment = mix(pigment, vec3(1.0, .76, .32), max(vHighlight * .48, vEdited * .11));
       pigment += vHighlight * sheen * vec3(.25, .19, .085);
+      // The interpretation adds detail to eligible weft without changing
+      // the centerline, route counts or the picking buffer.
+      if (scenarioShare > 0.0 && layer.a > .25 && layer.a < .75 && vRetired < .5) {
+        float marked = 1.0 - step(scenarioShare, fract(vYarn.x + vScenarioOffset));
+        float filament = pow(.5 + .5 * sin(vYarn.x * 73.0 + vYarn.y * 28.0 + threadPhase), 6.0);
+        vec3 accents = vec3(.70,.75,1.0) * gestures.x * (.12 + .23 * filament)
+          + vec3(1.0,.73,.43) * gestures.y * (.16 + .30 * max(filament, celebration))
+          + vec3(.48,.85,1.0) * gestures.z * (.14 + .37 * max(pulseLight, .5 * clothEdge))
+          + vec3(1.0,.54,.62) * gestures.w * (.10 + .36 * join * max(filament, .48));
+        pigment += marked * (.38 + scenarioShare * .70) * (accents + pigment * .25);
+        coverage = mix(coverage, min(1.0, coverage + .12 * filament),
+          marked * scenarioShare);
+      }
       gl_FragColor = vec4(pigment, coverage * .95);
     }
   `;
@@ -536,7 +684,7 @@ const TextileLoom = (() => {
     let bounds;
     let visible = false, frameId = 0, gl, program, buffer, editBuffer, elements, uniforms, quality, mesh;
     const expression = LoomInterpretations.transition();
-    let expressionTime = 0;
+    let expressionTime = 0, scenarioShare = 0, scenarioFiltered = false;
     let elapsed = 0, insertion = 0, previous = 0, failed = false;
     let settled = new Set();
     let rebuildNeeded = true;
@@ -549,6 +697,7 @@ const TextileLoom = (() => {
 
     function writeEdit(target, fiber, edit, start = 0) {
       const steps = fiber.centers.length - 1;
+      const scenarioOffset = FlightData.hash('escenario:' + fiber.id) / 4294967296;
       const sides = fiber.vertexCount / (steps + 1);
       for (let ring = 0; ring <= steps; ring++) {
         const [x, y] = TextileNeedle.offsetAt(edit, Math.fround(ring / steps));
@@ -557,7 +706,7 @@ const TextileLoom = (() => {
           target[index] = fiber.code;
           target[index + 1] = x;
           target[index + 2] = y;
-          target[index + 3] = 0;
+          target[index + 3] = scenarioOffset;
         }
       }
     }
@@ -600,13 +749,18 @@ const TextileLoom = (() => {
         const target = Math.round(opacityFor(fiber) * 255);
         let start = target;
         if (animate) {
-          if (previousById) start = previousById.get(fiber.id) ?? (fiber.system === 'support' ? 0 : target);
+          if (previousById) start = previousById.get(fiber.id) ?? (fiber.system === 'support' || fiber.corridor ? 0 : target);
           else if (layerPixels?.length === pixels.length) start = Math.round(lerp(layerPixels[i], layerPixels[i + 1], eased));
         }
         const visible = embroidered
           ? target > 0 && Boolean(fiber.figure) && fiber.pickable !== false
           : LoomDestinations.layerPickable(layer.mode, fiber.corridor?.matched ?? layer.routeIds.has(fiber.group), fiber.system === 'warp');
-        pixels.set([start, target, visible && !fiber.retired && !fiber.frameRail ? 255 : 0, fiber.figure ? 255 : 0], i);
+        const scenarioEligible = scenarioShare > 0 && fiber.system === 'weft'
+          && (!scenarioFiltered || (fiber.corridor
+            ? fiber.corridor.routes.some(route => layer.routeIds.has(route.id))
+            : layer.routeIds.has(fiber.group)));
+        pixels.set([start, target, visible && !fiber.retired && !fiber.frameRail ? 255 : 0,
+          fiber.figure ? 255 : scenarioEligible ? 128 : 0], i);
       }
       gl.bindTexture(gl.TEXTURE_2D, layerTexture);
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
@@ -638,16 +792,16 @@ const TextileLoom = (() => {
       gl.useProgram(program);
       gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
       gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, elements);
-      for (const [name, size, offset] of [['point',3,0], ['normal',3,3], ['color',3,6], ['yarn',2,9], ['phase',1,11], ['stitch',3,12], ['previousPosition',4,15]]) {
+      for (const [name, size, offset] of [['point',3,0], ['normal',3,3], ['color',3,6], ['yarn',2,9], ['phase',1,11], ['stitch',4,12], ['previousPosition',4,16]]) {
         const location = gl.getAttribLocation(program, name);
         gl.enableVertexAttribArray(location);
-        gl.vertexAttribPointer(location, size, gl.FLOAT, false, 76, offset * 4);
+        gl.vertexAttribPointer(location, size, gl.FLOAT, false, 80, offset * 4);
       }
       gl.bindBuffer(gl.ARRAY_BUFFER, editBuffer);
       const editLocation = gl.getAttribLocation(program, 'fiberEdit');
       gl.enableVertexAttribArray(editLocation);
       gl.vertexAttribPointer(editLocation, 4, gl.FLOAT, false, 16, 0);
-      uniforms = Object.fromEntries(['frame','sceneCenter','time','portrait','insertion','moving','pickView','picking','pull','editWeight','highlight','morph','layerProgress','layerWidth','layerTexture','embroideryPass','expressionMotion','expressionGesture','expressionLow','expressionMid','expressionHigh','expressionFinish'].map(name => [name, gl.getUniformLocation(program, name)]));
+      uniforms = Object.fromEntries(['frame','sceneCenter','time','portrait','insertion','moving','pickView','picking','pull','editWeight','highlight','morph','layerProgress','layerWidth','layerTexture','embroideryPass','scenarioShare','expressionClock','expressionModes','expressionLow','expressionMid','expressionHigh','expressionFinish'].map(name => [name, gl.getUniformLocation(program, name)]));
       gl.enable(gl.DEPTH_TEST);
       gl.enable(gl.BLEND);
       gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA, gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
@@ -741,7 +895,7 @@ const TextileLoom = (() => {
       }
       const fibers = buildFibers(data, quality, embroidered, layer.routeIds, layer.mode);
       mesh = meshFibers(fibers, quality, settled, prior);
-      bounds = projectedBounds(mesh, quality.portrait);
+      bounds = projectedBounds(mesh, quality.portrait, !embroidered);
       morph = prior.size ? 0 : 1;
       rebuildNeeded = false;
       insertion = paused ? 10 : 0;
@@ -800,15 +954,18 @@ const TextileLoom = (() => {
         elapsed += delta;
         insertion = Math.min(10, insertion + delta);
       }
-      const [strength, lr, lg, lb, mr, mg, mb, hr, hg, hb, finish, grain, contrast, speed, amplitude, spread, crossing] =
+      const [strength, lr, lg, lb, mr, mg, mb, hr, hg, hb, finish, grain, contrast, speed, memory, joy, anticipation, reunion] =
         expression.advance(Math.min(delta, .05), motion.matches);
       if (!paused && !motion.matches) expressionTime = (expressionTime + delta * 2.4 * speed) % (2 * Math.PI);
-      gl.uniform3f(uniforms.expressionMotion, strength, expressionTime, amplitude);
-      gl.uniform2f(uniforms.expressionGesture, spread, crossing);
+      gl.uniform1f(uniforms.scenarioShare, embroidered ? -1 : scenarioShare);
+      gl.uniform1f(uniforms.expressionClock, motion.matches ? 0 : expressionTime);
+      const interpretation = Number(!embroidered);
+      gl.uniform4f(uniforms.expressionModes, memory * interpretation, joy * interpretation,
+        anticipation * interpretation, reunion * interpretation);
       gl.uniform3f(uniforms.expressionLow, lr, lg, lb);
       gl.uniform3f(uniforms.expressionMid, mr, mg, mb);
       gl.uniform3f(uniforms.expressionHigh, hr, hg, hb);
-      gl.uniform4f(uniforms.expressionFinish, strength, finish, grain, contrast);
+      gl.uniform4f(uniforms.expressionFinish, strength * interpretation, finish, grain, contrast);
       const interaction = needle.update(now, unit, motion.matches, paused || motion.matches);
       gl.uniform4fv(uniforms.pull, interaction.pull);
       gl.uniform1f(uniforms.editWeight, interaction.resetWeight);
@@ -933,6 +1090,13 @@ const TextileLoom = (() => {
         visible = value;
         if (value) schedule();
         else { rememberSeated(); dispose(); previous = 0; }
+      },
+      setScenario(intensity, filtered = false) {
+        if (scenarioShare === intensity && scenarioFiltered === filtered) return;
+        if ((scenarioShare > 0) !== (intensity > 0) || scenarioFiltered !== filtered) layerDirty = true;
+        scenarioShare = intensity;
+        scenarioFiltered = filtered;
+        schedule();
       },
       setEmotion(id) {
         expression.select(LoomInterpretations.get(id).values);
