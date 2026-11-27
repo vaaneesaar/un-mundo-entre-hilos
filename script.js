@@ -438,10 +438,11 @@ function initDemoFlights() {
   const destinationAvailable = place => place.airportIds.some(id => historicalAirports.has(id));
   const layers = document.querySelector('#destination-layer');
   const restore = document.querySelector('#destination-restore');
-  const context = document.querySelector('#destination-context');
   const visualization = document.querySelector('#loom-visualization');
   const figureOption = visualization.querySelector('[value="figure"]');
   const note = document.querySelector('#visualization-note');
+  const infoBody = document.querySelector('.loom-info-body');
+  const infoMotion = matchMedia('(prefers-reduced-motion: reduce)');
   const airportDisclosure = document.querySelector('#destination-airports-disclosure');
   const embroideryCaption = document.querySelector('#embroidery-caption');
   const embroideryName = document.querySelector('#embroidery-name');
@@ -484,7 +485,7 @@ function initDemoFlights() {
   const emptyData = { ...FlightData.toLoomData(FlightData.getDemo(defaultDay, state.activity)), routes: [] };
   compareDay.value = state.day;
   const format = FlightData.countFormat;
-  const fields = Object.fromEntries(['name','type','period','count','coverage','airports','origins'].map(
+  const fields = Object.fromEntries(['name','type','period','count','stats','coverage','airports','origins'].map(
     name => [name, document.querySelector('#destination-' + name)]
   ));
 
@@ -535,7 +536,7 @@ function initDemoFlights() {
 
   function renderSample(result) {
     sampleMetric.hidden = false;
-    sampleMetric.querySelector('[data-sample-label]').textContent = isDemo() ? 'Vuelos de demostración' : 'Vuelos observados';
+    sampleMetric.querySelector('[data-sample-label]').textContent = isDemo() ? 'Vuelos de demostración' : 'Vuelos observados · muestra total';
     const sourceName = isDemo() ? 'Simulación' : result.provenance?.routes?.name ?? 'Sin fuente de rutas';
     const partial = result.routeSlots > 0 && result.routeSlots < result.slots;
     const sampleCoverage = partial ? ` · ${result.routeSlots} de ${result.slots} días con datos` : '';
@@ -1038,7 +1039,6 @@ function initDemoFlights() {
     const eligible = routesFromOrigin(dataset);
     renderCountries(destination, eligible);
     const matches = LoomDestinations.connections(eligible, place, sense);
-    context.hidden = !place;
     restore.hidden = !place;
     direction.closest('label').hidden = false;
     direction.value = destination ? sense : 'both';
@@ -1052,10 +1052,10 @@ function initDemoFlights() {
     const routeIds = new Set(matches.matched.keys());
     figureOption.disabled = !symbol || !matches.flightCount;
     visualization.value = state.visualization;
-    note.hidden = showingFigure;
-    note.textContent = !destination ? 'Selecciona un país para descubrir su figura bordada.'
-      : !symbol ? 'Este destino todavía no cuenta con una figura bordada.'
-        : !matches.flightCount ? 'La figura requiere vuelos observados para esta selección.' : 'Elige Figura bordada para ver la lectura poética de ' + destination.name + '.';
+    note.hidden = !place;
+    note.textContent = !place ? '' : !symbol ? 'Sin figura bordada para esta selección.'
+      : !matches.flightCount ? 'Figura bordada: ' + symbol.name + ' · requiere vuelos observados.'
+      : 'Figura bordada: ' + symbol.name + (showingFigure ? '' : ' · disponible en Visualización.');
     embroideryCaption.hidden = !showingFigure;
     compactDescription.hidden = !showingFigure;
     if (showingFigure) {
@@ -1082,28 +1082,41 @@ function initDemoFlights() {
       }
     }
     renderScenario();
-    if (!place) return;
-
     const airportLabel = id => {
       const airport = (source.airports ?? FlightData.airports)[id];
       return airport ? `${airport.city} (${airport.code || id})` : id;
     };
-    fields.name.textContent = place.name;
-    fields.type.textContent = [LoomDestinations.typeNames[place.type], place.city, place.country,
-      place.iata ? `${place.iata} / ${place.icao}` : null
-    ].filter(Boolean).join(' · ');
-    fields.period.textContent = dataset.period.label + (originCountry ? ' · Origen: ' + (catalog.get('country:' + originCountry)?.name ?? originCountry) : '');
-    const flightsLabel = matches.flightCount === 1 ? 'vuelo' : 'vuelos';
-    const airportCount = matches.recordedAirports.size;
-    const airportsLabel = airportCount === 1 ? 'aeropuerto' : 'aeropuertos';
-    const routesLabel = matches.matched.size === 1 ? 'ruta' : 'rutas';
-    fields.count.textContent = matches.matched.size
-      ? `${format.format(matches.flightCount)} ${flightsLabel} · ${format.format(matches.matched.size)} ${routesLabel} · ${format.format(airportCount)} ${airportsLabel}`
-      : 'No hay conexiones para este destino en el periodo seleccionado.';
-    fields.coverage.textContent = `${isDemo() ? 'Datos de demostración' : dataset.provenance?.routes?.name ?? 'Sin fuente de rutas'} · Muestra de rutas: ${dataset.routeSlots} de ${dataset.slots} ${periodType === 'hour' ? 'horas' : 'días'}`;
-    airportDisclosure.hidden = !airportCount;
-    if (!airportCount) airportDisclosure.open = false;
-    fields.airports.replaceChildren(...[...matches.recordedAirports].map(airportLabel)
+    const senseLabel = { arrivals: 'Llegadas (destino)', departures: 'Salidas (origen)', both: 'Llegadas y salidas' };
+    fields.name.textContent = place?.name ?? 'Vista general';
+    fields.type.textContent = place ? [senseLabel[sense], place.iata ? `${place.iata} / ${place.icao}` : null]
+      .filter(Boolean).join(' · ') : 'Todos los países';
+    fields.period.textContent = dataset.period.label + (originCountry && destination
+      ? ' · Origen: ' + (catalog.get('country:' + originCountry)?.name ?? originCountry) : '');
+    const registry = source.airports ?? FlightData.airports;
+    const relatedIds = place ? matches.recordedAirports : new Set(eligible.flatMap(route => [route.originId, route.destinationId]));
+    const airportCount = relatedIds.size;
+    const observed = place ? matches.flightCount : routeVolume(eligible);
+    const routeCount = place ? matches.matched.size : eligible.length;
+    const countryCount = place ? null : new Set([...relatedIds].map(id => registry[id]?.country).filter(Boolean)).size;
+    const stat = (count, one, many) => format.format(count) + ' ' + (count === 1 ? one : many);
+    const tally = !dataset.routeSlots ? 'Sin registros para este periodo'
+      : stat(observed, 'vuelo', 'vuelos') + (isDemo() ? ' de demostración' : observed === 1 ? ' observado' : ' observados');
+    if (fields.count.textContent !== tally) {
+      fields.count.textContent = tally;
+      if (!infoMotion.matches) {
+        fields.count.getAnimations().forEach(animation => animation.cancel());
+        fields.count.animate([{ opacity: .60 }, { opacity: 1 }], { duration: 250, easing: 'ease-out' });
+      }
+    }
+    fields.stats.textContent = dataset.routeSlots ? [
+      stat(routeCount, 'ruta', 'rutas'),
+      ...(countryCount === null ? [] : [stat(countryCount, 'país conectado', 'países conectados')]),
+      stat(airportCount, 'aeropuerto', 'aeropuertos')
+    ].join(' · ') : '';
+    fields.coverage.textContent = `${isDemo() ? 'Datos de demostración' : dataset.provenance?.routes?.name ?? 'Sin fuente de rutas'} · ${dataset.routeSlots} de ${dataset.slots} ${periodType === 'hour' ? 'horas' : 'días'} con datos`;
+    airportDisclosure.hidden = !place || !airportCount;
+    if (airportDisclosure.hidden) airportDisclosure.open = false;
+    fields.airports.replaceChildren(...(place ? [...relatedIds] : []).map(airportLabel)
       .sort((a, b) => a.localeCompare(b, 'es'))
       .map(label => {
         const airport = document.createElement('li');
@@ -1171,6 +1184,11 @@ function initDemoFlights() {
     const scaleNote = document.querySelector('#comparison-scale');
     stage.setAttribute('aria-busy', 'true');
     temporalNote.textContent = 'Consultando el periodo…';
+    fields.count.textContent = 'Consultando el periodo…';
+    fields.stats.textContent = '';
+    fields.coverage.textContent = '';
+    fields.origins.hidden = airportDisclosure.hidden = note.hidden = true;
+    compactDescription.hidden = true;
     if (showBoth) {
       for (const panel of panels) renderComparisonPanel(panel, null, null, 'Consultando…');
       difference.textContent = scaleNote.textContent = '';
@@ -1230,6 +1248,8 @@ function initDemoFlights() {
       total.textContent = '—';
       emotionFacts.textContent = 'No se pudieron consultar los datos del periodo.';
       dataset = null;
+      fields.count.textContent = 'Datos del periodo no disponibles';
+      fields.period.textContent = '';
       renderScenario();
       temporalNote.textContent = 'No se pudo consultar el periodo. Elige otra fecha para reintentar.';
       if (showBoth) {
@@ -1245,6 +1265,7 @@ function initDemoFlights() {
   }
 
   function changeTime() {
+    infoBody.scrollTop = 0;
     loom.clearEdits();
     secondary?.clearEdits();
     reloadData();
@@ -1254,11 +1275,8 @@ function initDemoFlights() {
     showingB = false;
     comparisonPanel.hidden = !value;
     stage.classList.toggle('is-comparing', value);
-    if (value) comparisonActions.append(loomActions, context);
-    else {
-      stage.prepend(loomActions);
-      stage.querySelector('.loom-metric').insertBefore(context, disclosure);
-    }
+    if (value) comparisonActions.append(loomActions);
+    else stage.prepend(loomActions);
     toggleCompare.setAttribute('aria-pressed', String(value));
     toggleCompare.textContent = value ? 'Salir de comparación' : 'Comparar';
     if (value) {
@@ -1278,11 +1296,14 @@ function initDemoFlights() {
 
   function choose(place, sense = 'arrivals') {
     const id = place?.id ?? null;
-    if (id !== state.destinationId) { loom.clearEdits(); secondary?.clearEdits(); }
+    if (id !== state.destinationId) {
+      loom.clearEdits();
+      secondary?.clearEdits();
+      infoBody.scrollTop = 0;
+    }
     state.destinationId = id;
     state.direction = sense;
     state.layer = place ? 'highlight' : 'all';
-    context.open = false;
     airportDisclosure.open = false;
     renderDestination();
   }
@@ -1298,7 +1319,6 @@ function initDemoFlights() {
     const place = catalog.get(countryPlaces.value || country.value);
     search.setValue(place);
     choose(place, state.direction);
-    context.open = true;
     countryPlaces.focus({ preventScroll: true });
   });
   visualization.addEventListener('change', () => {
@@ -1401,7 +1421,6 @@ function initDemoFlights() {
       search.setValue(null);
       state.destinationId = null;
       state.layer = 'all';
-      context.open = false;
     }
     activity.closest('.loom-demo-controls').hidden = !isDemo();
     document.querySelector('#demo-date-label').textContent = isDemo() ? 'Fecha de demostración (UTC)' : 'Fecha de consulta (UTC)';
