@@ -3,6 +3,14 @@
 const LoomHistory = (() => {
   const publication = month => month >= '2019-01' && month <= '2021-12' ? 'OpenSky'
     : month >= '2022-01' && month <= '2026-09' ? 'OPDI' : null;
+  const series = {
+    OpenSky: { id: 'opensky:routes', file: /^opensky-[a-z0-9-]+\.json$/,
+      original: /^flightlist_\d{8}_\d{8}\.csv\.gz$/, checksum: 'md5', hash: /^[a-f0-9]{32}$/,
+      coverage: 'OpenSky v21.12 · muestra ADS-B con aeropuertos estimados' },
+    OPDI: { id: 'opdi:routes', file: /^opdi-\d{4}-\d{2}\.json$/,
+      checksum: 'sha256', hash: /^[a-f0-9]{64}$/ }
+  };
+  const providerAt = day => publication(day.slice(0, 7));
   const labels = {
     available: 'Disponible',
     pending: 'Publicado por OpenSky · mes aún no descargado',
@@ -15,10 +23,14 @@ const LoomHistory = (() => {
       throw Error('Índice histórico inválido.');
     const months = new Map(), counts = new Map();
     for (const entry of index.months) {
-      if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(entry.month) || publication(entry.month) !== 'OpenSky' ||
-          months.has(entry.month) || !/^opensky-[a-z0-9-]+\.json$/.test(entry.file) ||
-          !/^flightlist_\d{8}_\d{8}\.csv\.gz$/.test(entry.original) ||
-          !/^[a-f0-9]{32}$/.test(entry.md5) || !Array.isArray(entry.days) || !entry.days.length)
+      const provider = publication(entry.month);
+      const expected = series[provider];
+      if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(entry.month) || !expected ||
+          months.has(entry.month) || !expected.file.test(entry.file) ||
+          !expected.hash.test(entry[expected.checksum]) || !Array.isArray(entry.days) || !entry.days.length ||
+          (provider === 'OpenSky' ? !expected.original.test(entry.original)
+            : entry.original !== 'flight_list_' + entry.month.replace('-', '') + '.parquet' ||
+              entry.file !== 'opdi-' + entry.month + '.json' || entry.release !== 'v0.0.2'))
         throw Error('Entrada mensual inválida.');
       for (const [day, count] of entry.days) {
         flights.dayBounds(day);
@@ -40,7 +52,7 @@ const LoomHistory = (() => {
         return hit;
       }
       const pending = Promise.resolve().then(() => load(file)).then(source => {
-        if (source.routes?.id !== 'opensky:routes' || source.world ||
+        if (source.routes?.id !== series[publication(month)].id || source.world ||
             JSON.stringify(source.timeline) !== JSON.stringify(entry.days)) throw Error('El agregado no coincide con el índice.');
         for (const id of Object.keys(source.airports)) {
           if (!Object.hasOwn(airports, id)) {
@@ -66,12 +78,16 @@ const LoomHistory = (() => {
     }
 
     return {
-      historical: true, timeline, dates: timeline.map(([day]) => day), airports, anchors,
+      historical: true, providerAt,
+      cacheKey: period => [period.id, providerAt(period.anchorDay ?? period.start)],
+      timeline, dates: timeline.map(([day]) => day), airports, anchors,
       status, label: month => labels[status(month)],
       hours: () => [],
       async read(period) {
         const start = Date.parse(period.start), end = Date.parse(period.end);
-        const chosen = period.type === 'hour' ? [] : [...months.values()].filter(entry => {
+        const expected = series[providerAt(period.anchorDay ?? period.start)];
+        const chosen = !expected || period.type === 'hour' ? [] : [...months.values()].filter(entry => {
+          if (series[publication(entry.month)] !== expected) return false;
           const bounds = time.interval('month', entry.month + '-01');
           return Date.parse(bounds.start) < end && Date.parse(bounds.end) > start;
         });
@@ -88,11 +104,11 @@ const LoomHistory = (() => {
             const old = routes.get(route.routeId);
             if (old) old.flightCount += route.flightCount;
             else routes.set(route.routeId, { ...route,
-              coverageLabel: 'OpenSky v21.12 · muestra ADS-B con aeropuertos estimados' });
+              coverageLabel: expected.coverage ?? source.routes.coverage });
           }
         }
         return { ...time.aggregate(period, [], [], {}), routes: [...routes.values()], routeSlots,
-          routeSource: 'opensky:routes', provenance: { routes: provenance }, status: 'observed',
+          routeSource: provenance?.id, provenance: { routes: provenance }, status: 'observed',
           sourceFiles: chosen, destinationIds: [...destinationIds], originIds: [...originIds] };
       }
     };

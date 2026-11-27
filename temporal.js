@@ -21,7 +21,7 @@ const LoomTime = (() => {
     else if (type === 'year') to.setUTCFullYear(to.getUTCFullYear() + 1);
     else to.setTime(+from + (type === 'hour' ? HOUR : type === 'week' ? 7 * DAY : DAY));
     const start = from.toISOString(), end = to.toISOString();
-    return { id: [type, start, end].join('/'), type, start, end,
+    return { id: [type, start, end].join('/'), type, start, end, anchorDay: day,
       days: (+to - +from) / DAY, label: type === 'hour'
         ? `${dateFormat.format(from)} · ${start.slice(11,16)}–${end.slice(11,16)} UTC`
         : type === 'day' ? dateFormat.format(from) + ' UTC'
@@ -82,7 +82,7 @@ const LoomTime = (() => {
     const entries = new Map();
     return {
       read(period, scenario) {
-        const id = JSON.stringify([period.id, scenario]);
+        const id = JSON.stringify([source.cacheKey?.(period) ?? period.id, scenario]);
         if (!entries.has(id)) {
           const pending = Promise.resolve().then(() => source.read(period, scenario)).catch(error => {
             if (entries.get(id) === pending) entries.delete(id);

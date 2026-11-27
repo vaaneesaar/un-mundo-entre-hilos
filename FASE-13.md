@@ -9,12 +9,12 @@ OPDI ofrece 57 Parquet mensuales de enero de 2022 a septiembre de 2026. Los 57 e
 | Año | Meses publicados por OPDI | Auditoría local confirmada |
 | --- | --- | --- |
 | 2022 | Enero–diciembre | Enero–abril |
-| 2023 | Enero–diciembre | Pendiente |
+| 2023 | Enero–diciembre | Enero |
 | 2024 | Enero–diciembre | Abril |
-| 2025 | Enero–diciembre | Pendiente |
+| 2025 | Enero–diciembre | Enero |
 | 2026 | Enero–septiembre | Septiembre |
 
-La auditoría registra por mes la huella SHA-256, filas originales, versiones internas, días con rutas válidas, aeropuertos y rutas únicas y exclusiones por motivo. Las seis auditorías se cotejaron con las huellas y el número de filas de los originales locales. Cada total de filas se reconcilió con la suma de válidos y exclusiones. Enero–abril de 2022 y abril de 2024 tienen la etiqueta interna `v2.0.0`. Septiembre de 2026 tiene `v0.0.2`. La versión del portal y la etiqueta interna son campos de procedencia distintos.
+La auditoría registra por mes la huella SHA-256, filas originales, versiones internas, días con rutas válidas, aeropuertos y rutas únicas y exclusiones por motivo. Las auditorías de los seis meses iniciales se cotejaron con las huellas y el número de filas de los originales locales. Cada total de filas se reconcilió con la suma de válidos y exclusiones. Enero–abril de 2022, enero de 2023, abril de 2024 y enero de 2025 tienen la etiqueta interna `v2.0.0`. Septiembre de 2026 tiene `v0.0.2`. La versión del portal y la etiqueta interna son campos de procedencia distintos.
 
 ## Criterio de inclusión y comparabilidad
 
@@ -37,3 +37,10 @@ PYTHONDONTWRITEBYTECODE=1 python3 tools/opdi_parquet.py \
   "$cache/flight_list_$mes.parquet" "$cache/ourairports.csv" \
   > "$cache/audit-opdi-$mes.json"
 ```
+
+
+### Compatibilidad del calendario y del manifiesto
+
+El calendario obtiene sus días del índice de agregados efectivamente servidos. Las entradas OPDI usan `opdi-AAAA-MM.json`, el nombre Parquet mensual oficial, `release: "v0.0.2"`, `sha256` del original y la lista `days` de fechas UTC y totales. El cargador comprueba que el proveedor del agregado y los totales diarios coincidan con el índice. Para una semana que cruza fuentes, el día elegido determina la serie; cada serie declara sus propios días cubiertos. La comparación muestra ambas observaciones sin calcular una diferencia directa entre proveedores.
+
+La licencia MIT publicada en la documentación de OPDI corresponde al paquete de software. La consulta pendiente debe confirmar el alcance de la reutilización de Flight List para distribuir agregados diarios por ruta y su atribución en un sitio público. [Licencia del software OPDI](https://euctrl-pru.github.io/OPDI/index.html) · [Contacto oficial OPDI](https://www.opdi.aero/about.html)

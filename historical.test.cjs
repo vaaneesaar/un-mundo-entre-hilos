@@ -76,3 +76,38 @@ test('calendar availability keeps leap days and does not fill confirmed OpenSky 
   for (const day of ['2019-12-14', '2021-03-14', '2021-05-31']) assert(!source.dates.includes(day));
   assert(source.dates.includes('2020-02-29'));
 });
+
+test('an indexed OPDI month is selectable and cross-boundary weeks keep sources separate', async () => {
+  const index = structuredClone(require('./data/history.json'));
+  const days = [['2022-01-01', 7], ['2022-01-02', 5]];
+  index.months.push({
+    month: '2022-01', file: 'opdi-2022-01.json', original: 'flight_list_202201.parquet',
+    release: 'v0.0.2', sha256: '0'.repeat(64), days
+  });
+  const payload = {
+    version: 1,
+    routes: {
+      provider: 'opdi', url: 'https://www.opdi.aero/flight-list-data.html',
+      authorization: 'Synthetic test only', definition: 'Synthetic fixture', coverage: 'Two UTC days',
+      retrievedAt: '2026-11-27T00:00:00Z', records: [],
+      daily: Object.fromEntries(days.map(([day,count]) => [day, [['KJFK','EGLL',count]]]))
+    }
+  };
+  const source = history.create(index, file => file === 'opdi-2022-01.json'
+    ? providers.imported(payload, flights, time) : load(file), flights, time);
+  assert(source.dates.includes('2022-01-01'));
+  assert.equal(source.status('2022-01'), 'available');
+  assert.equal(source.status('2022-02'), 'separate');
+  const cached = time.cache(source);
+  const earlier = await cached.read(time.interval('week', '2021-12-31'));
+  const later = await cached.read(time.interval('week', '2022-01-01'));
+  assert.equal(earlier.routeSource, 'opensky:routes');
+  assert.equal(later.routeSource, 'opdi:routes');
+  assert.equal(later.routeSlots, 2);
+  assert.equal(later.slots, 7);
+  assert.equal(later.routes[0].flightCount, 12);
+  const year = await cached.read(time.interval('year', '2022-01-01'));
+  assert.equal(year.routeSlots, 2);
+  assert.equal(year.routes[0].flightCount, 12);
+  assert.equal(year.provenance.routes.name, 'OPDI / EUROCONTROL');
+});

@@ -561,7 +561,8 @@ function initDemoFlights() {
     if (timeline.length && result.period.type !== 'hour' && result.period.days === result.routeSlots) {
       const previousDay = new Date(start - 86400000).toISOString().slice(0, 10);
       const previous = LoomTime.interval(result.period.type, previousDay);
-      const rows = timeline.filter(([day]) => day >= previous.start.slice(0, 10) && day < previous.end.slice(0, 10));
+      const rows = timeline.filter(([day]) => day >= previous.start.slice(0, 10) && day < previous.end.slice(0, 10)
+        && (!source.providerAt || source.providerAt(day) === source.providerAt(result.period.anchorDay ?? result.period.start)));
       if (rows.length === result.period.days && previous.days === result.period.days) {
         const prior = rows.reduce((sum, [, value]) => sum + value, 0);
         if (prior > 0) {
@@ -574,7 +575,7 @@ function initDemoFlights() {
     if (source.historical) {
       const month = state.day.slice(0, 7);
       historyCoverage.textContent = result.routeSlots
-        ? `OpenSky · ${result.routeSlots} de ${result.slots} días con datos${result.routeSlots < result.slots ? ' · cobertura temporal parcial' : ''}`
+        ? `${result.provenance?.routes?.name ?? 'Muestra histórica'} · ${result.routeSlots} de ${result.slots} días con datos${result.routeSlots < result.slots ? ' · cobertura temporal parcial' : ''}`
         : source.status(month) === 'available' ? 'Sin registros para este intervalo en el extracto local.' : source.label(month);
     }
     for (const bar of sampleSeries.children) {
@@ -835,7 +836,8 @@ function initDemoFlights() {
     if (!result) scenarioReference.disabled = true;
     scenarioVariation.textContent = 'Sin datos suficientes para comparar.';
     if (!result) return;
-    if (!place) renderScenarioChart(result.period, LoomScenarios.series(source.timeline, result.period, percent));
+    if (!place) renderScenarioChart(result.period, LoomScenarios.series(source.timeline?.filter(([day]) => !source.providerAt ||
+      source.providerAt(day) === source.providerAt(result.period.anchorDay ?? result.period.start)), result.period, percent));
     syncScenarioReference(result.period);
     const compareWithB = comparing && comparisonResult;
     const referencePeriod = compareWithB ? comparisonResult.period : scenarioDates.get(scenarioReference.value);
@@ -1073,10 +1075,10 @@ function initDemoFlights() {
       secondary.setFigure(showingFigure ? symbol : null, otherIds);
       secondary.setLayer(state.layer, otherIds);
       renderComparisonPanel(panels[1], comparisonResult, place ? other : null);
-      if (source.historical && dataset.routeSlots === dataset.slots &&
+      if (source.historical && dataset.routeSource && dataset.routeSource === comparisonResult.routeSource && dataset.routeSlots === dataset.slots &&
           comparisonResult.routeSlots === comparisonResult.slots && dataset.slots === comparisonResult.slots) {
         document.querySelector('#comparison-difference').textContent =
-          'Misma serie OpenSky y duración comparable · ' + sampleDifference(dataset, comparisonResult);
+          'Misma serie y duración comparable · ' + sampleDifference(dataset, comparisonResult);
       }
     }
     renderScenario();
@@ -1212,10 +1214,11 @@ function initDemoFlights() {
         difference.textContent = delta
           ? `B − A: ${delta.difference > 0 ? '+' : ''}${display(delta.difference)} vuelos ${basis}${delta.percent === null ? '' : ` (${delta.percent > 0 ? '+' : ''}${display(delta.percent)} %)`}. `
           : source.historical && a.routeSlots && b?.routeSlots
-            ? (a.routeSlots === a.slots && b.routeSlots === b.slots && a.slots === b.slots
-              ? 'Misma serie OpenSky y duración comparable · diferencia de la muestra: ' +
+            ? (a.routeSource !== b.routeSource ? 'Fuentes distintas · diferencias de cobertura y método; se muestran por separado.'
+              : a.routeSlots === a.slots && b.routeSlots === b.slots && a.slots === b.slots
+              ? 'Misma serie y duración comparable · diferencia de la muestra: ' +
                 sampleDifference(a, b)
-              : 'Misma serie OpenSky · cobertura o duración diferente; sin diferencia directa.')
+              : 'Misma serie · cobertura o duración diferente; sin diferencia directa.')
             : 'Diferencia no disponible con esta cobertura. ';
         scaleNote.textContent = source.historical
           ? ' · Ambos telares usan la misma escala de vuelos acumulados.'
@@ -1376,14 +1379,14 @@ function initDemoFlights() {
     }));
     for (const file of source.historical ? dataset?.sourceFiles ?? [] : []) {
       const note = document.createElement('p');
-      note.textContent = `${file.original} · MD5 ${file.md5}`;
+      note.textContent = file.sha256 ? `${file.original} · OPDI ${file.release} · SHA-256 ${file.sha256}` : `${file.original} · MD5 ${file.md5}`;
       provenance.append(note);
     }
     sourceStatus.textContent = isDemo() ? 'Simulación de datos de vuelos.'
       : !entries.length ? source.historical ? historyCoverage.textContent : localSourceStatus
         : realSource.expired ? 'Una serie excede la vigencia admitida y queda excluida.'
           : manualSource ? 'Archivo local validado. La procedencia y el permiso son los declarados en el archivo.'
-            : 'Muestra histórica local de OpenSky validada y cargada automáticamente.';
+            : 'Muestra histórica validada y cargada automáticamente.';
   }
   function selectSource() {
     const nextSource = isDemo() ? demoSource : realSource;
