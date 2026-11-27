@@ -23,16 +23,18 @@ async function indexMonth(args) {
   if (source.routes?.id !== 'opensky:routes' || source.world || !source.timeline.length ||
       source.timeline.some(([day]) => !day.startsWith(month + '-')))
     throw Error('El agregado debe contener solo rutas OpenSky del mes indicado.');
+  const result = await source.read(time.interval('month', month + '-01'));
+  const origins = new Set(source.originIds.map(id => source.airports[id].country));
+  const destinations = new Set(source.destinationIds.map(id => source.airports[id].country));
   const manifest = path.join(directory, 'history.json');
   const index = fs.existsSync(manifest) ? JSON.parse(fs.readFileSync(manifest, 'utf8')) : { version: 1, months: [] };
   const entry = { month, file, original: path.basename(original), md5: expected, days: source.timeline };
   index.months = [...index.months.filter(row => row.month !== month), entry].sort((a, b) => a.month.localeCompare(b.month));
   fs.writeFileSync(manifest + '.tmp', JSON.stringify(index, null, 2) + '\n');
   fs.renameSync(manifest + '.tmp', manifest);
-  const result = await source.read(time.interval('month', month + '-01'));
-  const countries = new Set(source.destinationIds.map(id => source.airports[id].country));
   console.log(JSON.stringify({ month, flights: result.routes.reduce((n, r) => n + r.flightCount, 0),
-    countries: countries.size, days: source.timeline.length, routes: result.routes.length }));
+    originCountries: origins.size, destinationCountries: destinations.size, countries: new Set([...origins, ...destinations]).size,
+    airports: new Set([...source.originIds, ...source.destinationIds]).size, days: source.timeline.length, routes: result.routes.length }));
 }
 
 indexMonth(process.argv.slice(2)).catch(error => { console.error(error.message); process.exitCode = 1; });

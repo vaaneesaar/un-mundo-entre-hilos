@@ -81,10 +81,10 @@ const LoomHistory = (() => {
           const source = await monthSource(entry);
           const result = await source.read(period);
           routeSlots += result.routeSlots;
-          for (const id of source.destinationIds) destinationIds.add(id);
-          for (const id of source.originIds) originIds.add(id);
           provenance ??= source.routes;
           for (const route of result.routes) {
+            originIds.add(route.originId);
+            destinationIds.add(route.destinationId);
             const old = routes.get(route.routeId);
             if (old) old.flightCount += route.flightCount;
             else routes.set(route.routeId, { ...route,

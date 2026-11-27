@@ -28,7 +28,7 @@ def read_airports(path):
             by_code[code] = entry
     return {code: row for code, row in by_code.items() if code not in ambiguous}
 
-def build(args):
+def build(args, *, airport_catalog=None, return_payload=False):
     month = re.fullmatch(r"flightlist_(\d{4})(\d{2})\d{2}_\d{8}\.csv\.gz", args.csv.name)
     if not month:
         raise ValueError("Se requiere un archivo mensual oficial de OpenSky.")
@@ -36,7 +36,7 @@ def build(args):
     old = set(json.loads(subprocess.check_output(
         ["node", "-e", "console.log(JSON.stringify(Object.keys(require('./flights.js').airports)))"],
         cwd=PROJECT, text=True)))
-    airports = read_airports(args.airports)
+    airports = airport_catalog if airport_catalog is not None else read_airports(args.airports)
     audits = {"previo": Counter(), "ampliado": Counter()}
     missing = Counter()
     daily = defaultdict(Counter)
@@ -106,9 +106,10 @@ def build(args):
         raise ValueError("El agregado mensual excede el límite de importación.")
     if args.output:
         args.output.write_bytes(data)
-    return {**{name:dict(audit) for name,audit in audits.items()}, "aeropuertos":len(codes), "rutas":len(pairs),
+    audit = {**{name:dict(audit) for name,audit in audits.items()}, "aeropuertos":len(codes), "rutas":len(pairs),
             "paises_destino": len({airports[b][2] for _,b in pairs if b in airports}),
             "fechas":len(daily),"bytes":len(data),"sin_icao_frecuentes":missing.most_common(10)}
+    return (audit, payload) if return_payload else audit
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)

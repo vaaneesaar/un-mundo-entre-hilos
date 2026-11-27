@@ -332,7 +332,9 @@ function initDemoFlights() {
     sampleMetric.hidden = false;
     sampleMetric.querySelector('[data-sample-label]').textContent = isDemo() ? 'Vuelos de demostración' : 'Vuelos observados';
     const sourceName = isDemo() ? 'Simulación' : result.provenance?.routes?.name ?? 'Sin fuente de rutas';
-    sampleMetric.querySelector('[data-sample-source]').textContent = sourceName + ' · ' + result.period.label;
+    const partial = result.routeSlots > 0 && result.routeSlots < result.slots;
+    const sampleCoverage = partial ? ` · ${result.routeSlots} de ${result.slots} días con datos` : '';
+    sampleMetric.querySelector('[data-sample-source]').textContent = sourceName + ' · ' + result.period.label + sampleCoverage;
     const airports = new Set(result.routes.flatMap(route => [route.originId, route.destinationId]));
     const registry = source.airports ?? FlightData.airports;
     const arrivals = new Set(result.routes.map(route => registry[route.destinationId].country));
@@ -575,7 +577,7 @@ function initDemoFlights() {
       }
       origin.value = originCountry;
     }
-    const current = new Set(routes.map(route => route.destinationId));
+    const current = new Set(routes.flatMap(route => [route.originId, route.destinationId]));
     const countries = LoomDestinations.destinationCountries(catalog, historicalAirports);
     if (place && !countries.some(item => item.iso === place.iso)) {
       const previous = catalog.get('country:' + place.iso);
@@ -996,12 +998,12 @@ function initDemoFlights() {
   });
   async function loadBundledRoutes() {
     try {
-      async function json(path) {
-        const response = await fetch('data/' + path, { redirect: 'error', signal: AbortSignal.timeout(15000) });
+      async function json(path, cache = 'default') {
+        const response = await fetch('data/' + path, { cache, redirect: 'error', signal: AbortSignal.timeout(15000) });
         if (!response.ok) throw Error('Recurso local no disponible');
         return response.json();
       }
-      const manifest = await json('history.json');
+      const manifest = await json('history.json', 'no-cache');
       const next = LoomHistory.create(manifest,
         async file => LoomProviders.imported(await json(file), FlightData, LoomTime), FlightData, LoomTime);
       if (manualSource) return;

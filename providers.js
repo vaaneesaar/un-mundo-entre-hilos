@@ -47,7 +47,7 @@ const LoomProviders = (() => {
       anchors[id] = flights.plotAnchor(airport);
       airports[id] = airport;
     }
-    const worldByDay = new Map(), uniqueFlights = new Map(), routeByDay = new Map(), dayIntervals = new Map(), excluded = new Map();
+    const worldByDay = new Map(), uniqueFlights = new Map(), routeByDay = new Map(), excluded = new Map();
     for (const row of payload.world?.records ?? []) {
       const [periodStart, periodEnd] = flights.dayBounds(row.dateUtc);
       const updatedAt = row.updatedAt == null ? world.retrievedAt : instant(row.updatedAt);
@@ -85,33 +85,37 @@ const LoomProviders = (() => {
         for (const row of rows) {
           if (!Array.isArray(row) || row.length !== 3) throw Error('Agregado de ruta inválido.');
           const [origin, destination, count] = row;
-          const routeId = [routes.id, origin, destination].map(encodeURIComponent).join(':');
+          const pair = origin + destination;
           if (!Number.isSafeInteger(count) || count <= 0 || origin === destination ||
               !Object.hasOwn(airports, origin) || !Object.hasOwn(airports, destination) ||
-              routeByDay.get(day)?.has(routeId)) throw Error('Agregado de ruta inválido o duplicado.');
+              routeByDay.get(day)?.has(pair)) throw Error('Agregado de ruta inválido o duplicado.');
           addRoute(day, origin, destination, count);
         }
       }
     }
 
     function addRoute(day, origin, destination, count) {
-      const routeId = [routes.id, origin, destination].map(encodeURIComponent).join(':');
-      const dayRows = routeByDay.get(day) ?? new Map();
-      if (!routeByDay.has(day)) routeByDay.set(day, dayRows);
-      const previous = dayRows.get(routeId);
-      if (previous) { previous.flightCount += count; return; }
-      if (!dayIntervals.has(day)) dayIntervals.set(day, flights.dayBounds(day));
-      const [periodStart, periodEnd] = dayIntervals.get(day);
-      dayRows.set(routeId, { routeId, sourceId: routes.id, sourceName: routes.name, originId: origin, destinationId: destination,
-        endpointStatus: payload.routes.provider === 'opensky' ? 'Aeropuertos estimados por OpenSky' : '',
-        periodStart, periodEnd, periodType: 'day', coverageStatus: 'sample', coverageLabel: routes.coverage, flightCount: count });
+      const pair = origin + destination;
+      if (!routeByDay.has(day)) {
+        flights.dayBounds(day);
+        routeByDay.set(day, new Map());
+      }
+      const dayRows = routeByDay.get(day);
+      const total = (dayRows.get(pair) ?? 0) + count;
+      if (!Number.isSafeInteger(total)) throw Error('Recuento de ruta fuera de rango.');
+      dayRows.set(pair, total);
     }
-    const destinationIds = [...new Set([...routeByDay.values()].flatMap(day =>
-      [...day.values()].map(route => route.destinationId)))];
-    const originIds = [...new Set([...routeByDay.values()].flatMap(day =>
-      [...day.values()].map(route => route.originId)))];
-    const timeline = [...routeByDay].sort(([a], [b]) => a.localeCompare(b)).map(([day, rows]) =>
-      [day, [...rows.values()].reduce((sum, row) => sum + row.flightCount, 0)]);
+    const destinations = new Set(), origins = new Set();
+    const timeline = [...routeByDay].sort(([a], [b]) => a.localeCompare(b)).map(([day, rows]) => {
+      let count = 0;
+      for (const [pair, volume] of rows) {
+        origins.add(pair.slice(0, 4));
+        destinations.add(pair.slice(4));
+        count += volume;
+      }
+      return [day, count];
+    });
+    const destinationIds = [...destinations], originIds = [...origins];
     const active = source => source && (!source.expiresAt || Date.parse(source.expiresAt) > now());
     const within = (day, period) => {
       const stamp = Date.parse(day + 'T00:00:00Z');
@@ -131,10 +135,26 @@ const LoomProviders = (() => {
       hours: () => [],
       async read(period) {
         const totals = active(world) ? [...worldByDay].filter(([day]) => within(day, period)).map(([, row]) => row) : [];
-        const sample = active(routes) ? [...routeByDay].filter(([day]) => within(day, period)).flatMap(([, rows]) => [...rows.values()]) : [];
-        const summary = time.aggregate(period, totals, sample, { worldSource: world?.id, routeSource: routes?.id });
+        const volumes = new Map();
+        let routeSlots = 0;
+        if (active(routes)) {
+          for (const [day, rows] of routeByDay) {
+            if (!within(day, period)) continue;
+            routeSlots++;
+            for (const [pair, volume] of rows) volumes.set(pair, (volumes.get(pair) ?? 0) + volume);
+          }
+        }
+        const sample = Array.from(volumes, ([pair, flightCount]) => {
+          const originId = pair.slice(0, 4), destinationId = pair.slice(4);
+          return { routeId: [routes.id, originId, destinationId].map(encodeURIComponent).join(':'),
+            sourceId: routes.id, sourceName: routes.name, originId, destinationId,
+            endpointStatus: routes.id === 'opensky:routes' ? 'Aeropuertos estimados por OpenSky' : '',
+            periodStart: period.start, periodEnd: period.end, periodType: 'day', periodLabel: period.label,
+            coverageStatus: 'sample', coverageLabel: routes.coverage, flightCount };
+        });
+        const summary = time.aggregate(period, totals, [], { worldSource: world?.id, routeSource: routes?.id });
         const partialDays = totals.filter(row => row.coverageStatus === 'partial').length;
-        return { ...summary, coverage: partialDays ? 'partial' : summary.coverage, partialDays,
+        return { ...summary, routes: sample, routeSlots, coverage: partialDays ? 'partial' : summary.coverage, partialDays,
           status: 'observed', provenance: { world, routes }, expired: this.expired,
           excluded: active(routes) ? [...excluded].filter(([day]) => within(day, period)).reduce((sum, [, value]) => sum + value, 0) : 0 };
       }
