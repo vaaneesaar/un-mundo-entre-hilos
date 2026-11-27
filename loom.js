@@ -431,6 +431,7 @@ const TextileLoom = (() => {
     uniform float editWeight;
     uniform float highlight;
     uniform float time, portrait, insertion, moving, construction;
+    uniform mediump float reweaving;
     uniform mediump float expressionClock;
     uniform mediump vec4 expressionModes;
     varying vec3 vNormal, vColor;
@@ -493,6 +494,14 @@ const TextileLoom = (() => {
         float depth = (displacement.x - displacement.y) * .14;
         p += vec3(displacement.x - depth * tilt, displacement.y + depth * .28, depth);
       }
+      // Use the same alternating edge and staggered lanes as the entrance.
+      float lane = mod(fiberCode, 8.0);
+      float edge = mod(fiberCode, 2.0) < .5 ? yarn.x : 1.0 - yarn.x;
+      float arrival = 1.15 + floor(lane * .5) * .68 + edge * 1.75;
+      float front = construction - arrival;
+      float seating = exp(-abs(front) * 5.8) * freedom * reweaving * (1.0 - vRetired);
+      p.y += seating * .06 * localWave;
+      p.z += seating * .11;
       vec3 camera = vec3(p.x + p.z * tilt, p.y - p.z * .28, p.z - p.x * tilt + p.y * .28);
       gl_Position = vec4(((camera.xy - sceneCenter) * frame - pickView.xy) * pickView.zw, -camera.z * .17, 1.0);
       vCode = vec2(mod(fiberCode, 256.0), floor(fiberCode / 256.0)) / 255.0;
@@ -507,19 +516,17 @@ const TextileLoom = (() => {
       vPhase = phase;
       vTension = tension;
       vEntry = threaded < .5 ? 1.0 : age;
-      if (construction < 6.0) {
+      if (construction < 6.0 && (reweaving < .5 || (threaded > .5 && vRetired < .5))) {
         bool rail = phase >= 72.0 && phase < 80.0;
-        float lane = mod(fiberCode, 8.0);
-        float edge = mod(fiberCode, 2.0) < .5 ? yarn.x : 1.0 - yarn.x;
-        float arrival = threaded > .5 ? 1.15 + floor(lane * .5) * .68 + edge * 1.75
-          : rail ? .04 : .36 + (1.0 - yarn.x) * .95;
-        vEntry = construction - arrival;
+        vEntry = threaded > .5 ? front : construction - (rail ? .04 : .36 + (1.0 - yarn.x) * .95);
       }
+      if (reweaving > .5 && (threaded < .5 || vRetired > .5)) vEntry = 1.0;
     }
   `;
   const fragmentSource = `
     precision mediump float;
     uniform float picking, layerProgress, layerWidth, embroideryPass, scenarioShare;
+    uniform float reweaveUnderlay;
     uniform sampler2D layerTexture;
     uniform vec3 expressionLow, expressionMid, expressionHigh;
     uniform vec4 expressionFinish;
@@ -533,6 +540,8 @@ const TextileLoom = (() => {
     varying float vDepth, vPhase, vEntry, vTension;
     void main() {
       float coverage = smoothstep(-.045, .115, vEntry);
+      // Leave a faint, full-span weave underneath the advancing thread fronts.
+      coverage = mix(coverage, 1.0, reweaveUnderlay);
       coverage *= mix(1.0, 1.0 - morph, vRetired);
       if (coverage <= .01) discard;
       vec2 codeBytes = floor(vCode * 255.0 + .5);
@@ -697,6 +706,8 @@ const TextileLoom = (() => {
     let expressionTime = 0, scenarioShare = 0, scenarioFiltered = false;
     let elapsed = 0, insertion = 0, previous = 0, failed = false;
     let construction = 6, constructionWait = 0;
+    let reweaveStart;
+    const reweaveDuration = 1100;
     function finishConstruction() {
       if (construction === 6) return;
       construction = 6;
@@ -790,6 +801,7 @@ const TextileLoom = (() => {
     }
 
     function showFallback() {
+      reweaveStart = undefined;
       finishConstruction();
       dispose();
       failed = true;
@@ -820,7 +832,7 @@ const TextileLoom = (() => {
       const editLocation = gl.getAttribLocation(program, 'fiberEdit');
       gl.enableVertexAttribArray(editLocation);
       gl.vertexAttribPointer(editLocation, 4, gl.FLOAT, false, 16, 0);
-      uniforms = Object.fromEntries(['frame','sceneCenter','time','portrait','insertion','moving','construction','pickView','picking','pull','editWeight','highlight','morph','layerProgress','layerWidth','layerTexture','embroideryPass','scenarioShare','expressionClock','expressionModes','expressionLow','expressionMid','expressionHigh','expressionFinish'].map(name => [name, gl.getUniformLocation(program, name)]));
+      uniforms = Object.fromEntries(['frame','sceneCenter','time','portrait','insertion','moving','construction','reweaving','reweaveUnderlay','pickView','picking','pull','editWeight','highlight','morph','layerProgress','layerWidth','layerTexture','embroideryPass','scenarioShare','expressionClock','expressionModes','expressionLow','expressionMid','expressionHigh','expressionFinish'].map(name => [name, gl.getUniformLocation(program, name)]));
       gl.enable(gl.DEPTH_TEST);
       gl.enable(gl.BLEND);
       gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA, gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
@@ -864,7 +876,7 @@ const TextileLoom = (() => {
     }
 
     function pickFiber(point, tolerance) {
-      if (construction < 6 || !frameReady || rebuildNeeded || !mesh || gl.isContextLost()) return null;
+      if (construction < 6 || reweaveStart !== undefined || !frameReady || rebuildNeeded || !mesh || gl.isContextLost()) return null;
       const width = host.clientWidth, height = host.clientHeight;
       if (width !== lastWidth || height !== lastHeight || point.x < 0 || point.y < 0 || point.x > width || point.y > height) return null;
       const size = TextileNeedle.pickSize, span = TextileNeedle.pickSpan;
@@ -973,7 +985,15 @@ const TextileLoom = (() => {
           if (construction >= 5.65) finishConstruction();
         }
       }
-      gl.uniform1f(uniforms.construction, construction);
+      if (reweaveStart === null) reweaveStart = now;
+      if (reweaveStart !== undefined && (motion.matches || now - reweaveStart >= reweaveDuration)) reweaveStart = undefined;
+      const reweaving = reweaveStart !== undefined;
+      const progress = reweaving ? (now - reweaveStart) / reweaveDuration : 0;
+      gl.uniform1f(uniforms.construction, reweaving ? .85 + progress * 4.8 : construction);
+      gl.uniform1f(uniforms.reweaving, Number(reweaving));
+      const underlay = reweaving ? 1 - .76 * Math.min(1, progress * 9) : 0;
+      gl.uniform1f(uniforms.reweaveUnderlay, underlay);
+      if (reweaving) insertion = 10;
       morph = motion.matches ? 1 : Math.min(1, morph + delta / .95);
       const easedMorph = morph * morph * (3 - 2 * morph);
       layerProgress = motion.matches ? 1 : Math.min(1, layerProgress + delta / layerDuration);
@@ -1032,7 +1052,7 @@ const TextileLoom = (() => {
           showFallback();
         }
       }
-      if (construction < 6 || (!paused && !motion.matches) || morph < 1 || layerProgress < 1 || expression.active || needle.needsFrame()) schedule();
+      if (construction < 6 || reweaveStart !== undefined || (!paused && !motion.matches) || morph < 1 || layerProgress < 1 || expression.active || needle.needsFrame()) schedule();
     }
 
     function schedule() {
@@ -1118,7 +1138,7 @@ const TextileLoom = (() => {
       setVisible(value) {
         visible = value;
         if (value) schedule();
-        else { finishConstruction(); rememberSeated(); dispose(); previous = 0; }
+        else { reweaveStart = undefined; finishConstruction(); rememberSeated(); dispose(); previous = 0; }
       },
       setScenario(intensity, filtered = false) {
         if (scenarioShare === intensity && scenarioFiltered === filtered) return;
@@ -1141,16 +1161,26 @@ const TextileLoom = (() => {
       },
       startConstruction() {
         if (motion.matches || failed) return;
+        reweaveStart = undefined;
         construction = constructionWait = 0;
         options.onConstruction?.(true);
         schedule();
       },
+      reweave() {
+        if (!visible || motion.matches || failed || !data.routes.length) return;
+        finishConstruction();
+        if (needle.isDragging()) needle.clear();
+        reweaveStart = null;
+        schedule();
+      },
       finishConstruction,
       restart() {
+        reweaveStart = undefined;
         finishConstruction();
         if (paused) setPaused(false);
         settled.clear();
-        elapsed = insertion = previous = 0;
+        elapsed = previous = 0;
+        insertion = 10;
         needle.clear();
       },
       setFigure(symbol, routeIds) {

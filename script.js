@@ -917,7 +917,8 @@ function initDemoFlights() {
     option.append(name, hint);
     emotionOptions.append(option);
   }
-  function applyEmotion(id) {
+  function applyEmotion(id, animate = true) {
+    const changed = id !== activeEmotion;
     activeEmotion = id;
     const preset = LoomInterpretations.get(id);
     disclosure.hidden = id === 'neutral';
@@ -935,7 +936,10 @@ function initDemoFlights() {
     document.querySelector('#telar').dataset.emotion = id;
     loom.setEmotion(id);
     secondary?.setEmotion(id);
-    renderScenario();
+    if (!stage.hasAttribute('aria-busy')) {
+      renderScenario();
+      if (animate && changed) animateWeave();
+    }
   }
   emotionOptions.addEventListener('click', event => {
     const option = event.target.closest('button[data-emotion]');
@@ -1178,9 +1182,19 @@ function initDemoFlights() {
     }
   }
 
-  async function reloadData() {
+  function animateWeave() {
+    loom.reweave();
+    if (comparing) secondary?.reweave();
+  }
+
+  function updateDestination(animate) {
+    if (stage.hasAttribute('aria-busy')) return;
+    renderDestination();
+    if (animate) animateWeave();
+  }
+
+  async function reloadData(animate = true) {
     const token = ++request;
-    if (visible) loom.finishConstruction();
     ++scenarioRequest;
     if (!scenarioResults.hidden) scenarioVariation.textContent = 'Consultando el periodo…';
     const showBoth = comparing;
@@ -1247,6 +1261,8 @@ function initDemoFlights() {
           : scale ? ` · Trama acumulada: ≈ ${scale} vuelos de la muestra por hebra` : '';
       }
       renderDestination();
+      if (!a.routes.length) loom.finishConstruction();
+      else if (animate) animateWeave();
     } catch (error) {
       if (token !== request) return;
       total.textContent = '—';
@@ -1262,17 +1278,18 @@ function initDemoFlights() {
         secondary.setData(emptyData);
       }
       loom.setData(emptyData);
+      loom.finishConstruction();
       console.warn('Consulta temporal:', error);
     } finally {
       if (token === request) stage.removeAttribute('aria-busy');
     }
   }
 
-  function changeTime() {
+  function changeTime(animate = true) {
     infoBody.scrollTop = 0;
     loom.clearEdits();
     secondary?.clearEdits();
-    reloadData();
+    reloadData(animate);
   }
   function setComparison(value, refresh = true) {
     comparing = value;
@@ -1296,10 +1313,11 @@ function initDemoFlights() {
   toggleCompare.addEventListener('click', () => setComparison(!comparing));
   periodSelect.addEventListener('change', () => { periodType = periodSelect.value; changeTime(); });
   compareDayA.addEventListener('change', () => { state.day = compareDayA.value; calendar.setSelectedDate(state.day); changeTime(); });
-  for (const control of [hourA, hourB, compareDay]) control.addEventListener('change', changeTime);
+  for (const control of [hourA, hourB, compareDay]) control.addEventListener('change', () => changeTime());
 
-  function choose(place, sense = 'arrivals') {
+  function choose(place, sense = 'arrivals', forceAnimation = false) {
     const id = place?.id ?? null;
+    const changed = id !== state.destinationId || sense !== state.direction || state.layer !== (place ? 'highlight' : 'all');
     if (id !== state.destinationId) {
       loom.clearEdits();
       secondary?.clearEdits();
@@ -1309,7 +1327,7 @@ function initDemoFlights() {
     state.direction = sense;
     state.layer = place ? 'highlight' : 'all';
     airportDisclosure.open = false;
-    renderDestination();
+    updateDestination(changed || forceAnimation);
   }
 
   const search = LoomDestinations.mountSearch(document.querySelector('#destination-search'), catalog, choose,
@@ -1326,19 +1344,21 @@ function initDemoFlights() {
     countryPlaces.focus({ preventScroll: true });
   });
   visualization.addEventListener('change', () => {
-    if (state.visualization !== visualization.value) { loom.clearEdits(); secondary?.clearEdits(); }
+    const changed = state.visualization !== visualization.value;
+    if (changed) { loom.clearEdits(); secondary?.clearEdits(); }
     state.visualization = visualization.value;
-    renderDestination();
+    updateDestination(changed);
   });
-  layers.addEventListener('change', () => { state.layer = layers.value; renderDestination(); });
+  layers.addEventListener('change', () => { state.layer = layers.value; updateDestination(true); });
   direction.addEventListener('change', () => {
     state.direction = direction.value;
-    renderDestination();
+    updateDestination(true);
   });
   restore.addEventListener('click', () => {
+    const hadOrigin = Boolean(originCountry);
     originCountry = '';
     search.setValue(null);
-    choose(null);
+    choose(null, 'arrivals', hadOrigin);
     document.querySelector('#destination-input').focus({ preventScroll: true });
   });
   activity.addEventListener('change', () => { state.activity = activity.value; updateHistoricalAirports(); reloadData(); });
@@ -1350,7 +1370,7 @@ function initDemoFlights() {
       changeTime();
     }
   });
-  function restartExperience() {
+  function restartExperience(animate = true) {
     historyDate = '';
     historyPeriod = 'day';
     state = LoomDestinations.createState(realSource.dates[0] ?? defaultDay);
@@ -1364,13 +1384,13 @@ function initDemoFlights() {
     scenarioAssumptions.clear();
     scenarioPeriod = '';
     scenarioReference.replaceChildren();
-    applyEmotion('neutral');
+    applyEmotion('neutral', false);
     loom.clearEdits();
     secondary?.clearEdits();
     loom.restart();
     secondary?.restart();
     mode.value = 'real';
-    selectSource();
+    selectSource(animate);
   }
   function closeExplorationPanels() {
     search.close();
@@ -1412,7 +1432,7 @@ function initDemoFlights() {
           : manualSource ? 'Archivo local validado. La procedencia y el permiso son los declarados en el archivo.'
             : 'Muestra histórica validada y cargada automáticamente.';
   }
-  function selectSource() {
+  function selectSource(animate = true) {
     const nextSource = isDemo() ? demoSource : realSource;
     if (nextSource !== source) {
       source = nextSource;
@@ -1445,7 +1465,7 @@ function initDemoFlights() {
     for (const [id, place] of activeCatalog) catalog.set(id, place);
     search.close();
     renderTimeline();
-    changeTime();
+    changeTime(animate);
   }
   origin.addEventListener('change', () => {
     originCountry = origin.value;
@@ -1453,10 +1473,10 @@ function initDemoFlights() {
     secondary?.clearEdits();
     if (originCountry) state.layer = 'highlight';
     else if (!state.destinationId) state.layer = 'all';
-    renderDestination();
+    updateDestination(true);
   });
 
-  mode.addEventListener('change', selectSource);
+  mode.addEventListener('change', () => selectSource());
   document.querySelector('#loom-show-demo').addEventListener('click', () => {
     mode.value = 'demo';
     periodType = periodSelect.value = 'day';
@@ -1500,13 +1520,13 @@ function initDemoFlights() {
       localSourceStatus = 'La muestra histórica local no está disponible. Puedes importar un archivo desde Ajustes → Fuentes.';
     }
     loadingLocalSource = false;
-    if (!isDemo()) selectSource();
+    if (!isDemo()) selectSource(false);
   }
-  selectSource();
+  selectSource(false);
   loadBundledRoutes();
   return {
     beginExperience() {
-      restartExperience();
+      restartExperience(false);
       loom.startConstruction();
     },
     setVisible(value) {
