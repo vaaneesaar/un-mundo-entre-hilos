@@ -346,7 +346,7 @@ function initIntro(screen, restart) {
 function initNavigation(loom) {
   const screens = new Map(Array.from(document.querySelectorAll('main > .screen'), (screen) => [screen.id, screen]));
   const navLinks = document.querySelectorAll('nav a');
-  const resetIntro = initIntro(screens.get('inicio'), loom.restartExperience);
+  const resetIntro = initIntro(screens.get('inicio'), loom.beginExperience);
   let activeScreen;
 
   function showScreen({ moveFocus = false } = {}) {
@@ -608,14 +608,24 @@ function initDemoFlights() {
       (result.status === 'unavailable' ? ' · ' + localSourceStatus : '');
   }
 
+  const constructionPanel = sceneA.querySelector('.loom-construction');
+  const skipConstruction = constructionPanel.querySelector('button');
+  const selectedFibers = new Map();
   function syncReset() { reset.disabled = !(editedA || (comparing && editedB)); }
   const loom = TextileLoom.mount(sceneA, [activity, trigger], document.querySelector('#loom-status'), emptyData, fiber => {
     state.fiberId = fiber?.id ?? null;
     state.routeId = fiber?.flightInfo?.routeId ?? null;
+    selectScenarioFiber(sceneA, fiber);
   }, {
+    onConstruction(active) {
+      const returnFocus = document.activeElement === skipConstruction;
+      constructionPanel.hidden = !active;
+      if (!active && returnFocus) sceneA.querySelector('canvas').focus({ preventScroll: true });
+    },
     onEdits(has) { editedA = has; syncReset(); },
     onPause(value) { paused = value; secondary?.setPaused(value); }
   });
+  skipConstruction.addEventListener('click', loom.finishConstruction);
   reset.addEventListener('click', () => {
     loom.clearEdits(true);
     if (comparing) secondary?.clearEdits(true);
@@ -627,6 +637,7 @@ function initDemoFlights() {
     sceneB.id = 'loom-art-b';
     sceneB.classList.remove('needle-active');
     sceneB.querySelectorAll('[id]').forEach(node => node.removeAttribute('id'));
+    sceneB.querySelector('.loom-construction').remove();
     sceneB.querySelector('.thread-info').hidden = true;
     sceneB.querySelector('.needle-cursor').hidden = true;
     sceneB.querySelector('canvas').setAttribute('aria-label', 'Telar del periodo B');
@@ -635,7 +646,7 @@ function initDemoFlights() {
     statusB.hidden = true;
     sceneB.append(statusB);
     stage.append(sceneB);
-    secondary = TextileLoom.mount(sceneB, [], statusB, emptyData, undefined, {
+    secondary = TextileLoom.mount(sceneB, [], statusB, emptyData, fiber => selectScenarioFiber(sceneB, fiber), {
       secondary: true, onEdits(has) { editedB = has; syncReset(); }
     });
     secondary.setComparison(true);
@@ -695,6 +706,33 @@ function initDemoFlights() {
   const scenarioReference = document.querySelector('#scenario-reference');
   const scenarioVariation = document.querySelector('#scenario-variation');
   const scenarioAssumptions = new Map();
+  // Illustrative starting point, separately editable for each emotion.
+  const initialScenarioPercent = 20;
+  const scenarioPercent = () => activeEmotion === 'neutral' ? null : scenarioAssumptions.has(activeEmotion)
+    ? scenarioAssumptions.get(activeEmotion) : initialScenarioPercent;
+
+  function selectScenarioFiber(scene, fiber) {
+    if (fiber) selectedFibers.set(scene, fiber);
+    else selectedFibers.delete(scene);
+    renderFiberScenario(scene, fiber);
+  }
+
+  function renderFiberScenario(scene, fiber) {
+    const section = scene.querySelector('.thread-scenario');
+    const band = fiber?.corridor;
+    const route = fiber?.flightInfo;
+    const observed = band?.flightCount ?? (route?.status !== 'demo' ? route?.flightCount : null);
+    section.hidden = activeEmotion === 'neutral' || isDemo() || observed == null;
+    if (section.hidden) return;
+    const preset = LoomInterpretations.get(activeEmotion);
+    const percent = scenarioPercent();
+    section.querySelector('[data-thread-scenario-title]').textContent = 'Lectura interpretativa · ' + preset.label;
+    section.querySelector('[data-thread-scenario-value]').textContent = percent === null ? 'Sin proporción aplicada.'
+      : scenarioFormatter.format(percent) + ' % hipotético · '
+        + display(LoomScenarios.quantity(observed, percent)) + ' equivalentes interpretativos '
+        + (band ? 'del grupo de rutas' : 'de la conexión');
+    section.querySelector('[data-thread-scenario-story]').textContent = preset.quote;
+  }
   const scenarioDates = new Map();
   const scenarioChart = document.querySelector('#scenario-chart');
   const scenarioFormatter = new Intl.NumberFormat('es-MX', { maximumFractionDigits: 2 });
@@ -737,7 +775,6 @@ function initDemoFlights() {
     if (scenarioSource === source && scenarioPeriod === period.id) return;
     scenarioSource = source;
     scenarioPeriod = period.id;
-    const remembered = scenarioReference.value;
     scenarioDates.clear();
     const unique = new Set([period.id]);
     for (const day of source.dates) {
@@ -746,15 +783,16 @@ function initDemoFlights() {
       unique.add(option.id);
       scenarioDates.set(day, option);
     }
-    scenarioReference.replaceChildren(...[...scenarioDates].map(([day, option]) => new Option(option.label, day)));
+    scenarioReference.replaceChildren(new Option('Seleccionar referencia', ''), ...[...scenarioDates].map(([day, option]) => new Option(option.label, day)));
     scenarioReference.disabled = !scenarioDates.size;
     const earlier = [...scenarioDates].filter(([, option]) => option.start < period.start).at(-1)?.[0];
-    scenarioReference.value = scenarioDates.has(remembered) ? remembered : earlier ?? scenarioDates.keys().next().value ?? '';
+    scenarioReference.value = earlier ?? '';
   }
 
   async function renderScenario() {
     const token = ++scenarioRequest;
-    const percent = scenarioAssumptions.get(activeEmotion) ?? null;
+    const percent = scenarioPercent();
+    for (const [scene, fiber] of selectedFibers) renderFiberScenario(scene, fiber);
     const enabled = percent !== null && !isDemo() && activeEmotion !== 'neutral';
     const { place, sense } = routeScope();
     const result = dataset;
@@ -770,24 +808,32 @@ function initDemoFlights() {
     scenarioCard.hidden = isDemo();
     scenarioClear.hidden = percent === null;
     scenarioResults.hidden = !enabled;
+    document.querySelector('#scenario-reading').hidden = !enabled;
     document.querySelector('#scenario-head').hidden = !enabled;
     document.querySelector('#scenario-note').hidden = enabled;
     if (!enabled) return;
     const scopeLabel = place ? place.name + (sense === 'both' ? ' · llegadas y salidas'
       : sense === 'arrivals' ? ' · llegadas' : ' · salidas') : 'Todos los países';
     const headline = current === null ? 'Sin datos observados' : display(current) + ' equivalentes interpretativos';
-    const assumption = scenarioFormatter.format(percent) + ' % supuesto';
+    const assumption = scenarioFormatter.format(percent) + (scenarioAssumptions.has(activeEmotion)
+      ? ' % hipotético' : ' % ilustrativo · editable');
     const preview = LoomInterpretations.get(activeEmotion).label + ' · ' + headline + ' · ' + assumption;
     scenarioPreview.textContent = preview;
     document.querySelector('#scenario-total').textContent = headline;
     document.querySelector('#scenario-assumption').textContent = '· ' + assumption;
+    document.querySelector('#scenario-narrative').textContent = LoomInterpretations.get(activeEmotion).quote;
+    document.querySelector('#scenario-emotion').textContent = LoomInterpretations.get(activeEmotion).label;
     document.querySelector('#scenario-base').textContent = scopeLabel
       + (sample?.observed != null ? ' · ' + display(sample.observed) + ' vuelos observados' : '');
     document.querySelector('#scenario-source').textContent =
       'Fuente de los vuelos: ' + (result?.provenance?.routes?.name ?? 'sin datos de rutas disponibles') + '.';
+    const coverageNote = document.querySelector('#scenario-coverage');
+    coverageNote.hidden = !sample;
+    if (sample) coverageNote.textContent = sample.covered + '/' + sample.slots
+      + (sample.type === 'hour' ? ' horas con datos de rutas' : ' días con datos de rutas');
     scenarioChart.hidden = true;
     if (!result) scenarioReference.disabled = true;
-    scenarioVariation.textContent = 'Sin datos para calcular la variación.';
+    scenarioVariation.textContent = 'Sin datos suficientes para comparar.';
     if (!result) return;
     if (!place) renderScenarioChart(result.period, LoomScenarios.series(source.timeline, result.period, percent));
     syncScenarioReference(result.period);
@@ -808,6 +854,14 @@ function initDemoFlights() {
         scenarioVariation.textContent = 'Sin cobertura suficiente para calcular la variación.';
         return;
       }
+      if (delta.normalized) {
+        const observedDaily = periodSample =>
+          scenarioFormatter.format(periodSample.observed / periodSample.covered)
+          + ' vuelos observados por día · ' + periodSample.covered + '/' + periodSample.slots + ' días con datos';
+        coverageNote.textContent = result.period.label + ' · ' + observedDaily(sample)
+          + '. ' + reference.period.label + ' · ' + observedDaily(other) + '.';
+        coverageNote.hidden = false;
+      }
       const direction = delta.difference > 0 ? '↑' : delta.difference < 0 ? '↓' : '→';
       const amount = direction + ' ' + signedScenario(delta.difference);
       const percentage = delta.percent !== null ? ' (' + signedScenario(delta.percent) + ' %)' : '';
@@ -820,8 +874,8 @@ function initDemoFlights() {
       scenarioPreview.textContent = preview + ' · ' + amount + unit + percentage;
       if (place || scenarioChart.hidden) {
         const pair = [
-          { label: result.period.label, start: Date.parse(result.period.start), quantity: delta.current },
-          { label: reference.period.label, start: Date.parse(reference.period.start), quantity: delta.reference }
+          { label: result.period.label, start: Date.parse(result.period.start), quantity: delta.current, coverage: sample.covered, days: sample.slots },
+          { label: reference.period.label, start: Date.parse(reference.period.start), quantity: delta.reference, coverage: other.covered, days: other.slots }
         ].sort((a, b) => a.start - b.start);
         renderScenarioChart(result.period, pair, delta.normalized ? 'Comparación por día con datos' : 'Comparación de periodos UTC');
       }
@@ -838,7 +892,7 @@ function initDemoFlights() {
     renderScenario();
   });
   scenarioClear.addEventListener('click', () => {
-    scenarioAssumptions.delete(activeEmotion);
+    scenarioAssumptions.set(activeEmotion, null);
     scenarioInput.value = '';
     renderScenario();
   });
@@ -862,8 +916,8 @@ function initDemoFlights() {
     const preset = LoomInterpretations.get(id);
     disclosure.hidden = id === 'neutral';
     emotionStory.open = false;
-    scenarioInput.value = scenarioAssumptions.get(id) ?? '';
-    scenarioCard.open = scenarioAssumptions.has(id);
+    scenarioInput.value = scenarioPercent() ?? '';
+    document.querySelector('#scenario-narrative').textContent = preset.quote ?? '';
     disclosure.querySelector('[data-emotion-active]').textContent = id === 'neutral' ? '' : preset.label;
     disclosure.querySelector('[data-emotion-title]').textContent = preset.title ?? '';
     disclosure.querySelector('[data-emotion-quote]').textContent = preset.quote ?? '';
@@ -873,7 +927,6 @@ function initDemoFlights() {
       option.setAttribute('aria-pressed', String(option.dataset.emotion === id));
     }
     document.querySelector('#telar').dataset.emotion = id;
-    for (const label of document.querySelectorAll('.thread-emotion span')) label.textContent = preset.label;
     loom.setEmotion(id);
     secondary?.setEmotion(id);
     renderScenario();
@@ -1108,6 +1161,7 @@ function initDemoFlights() {
 
   async function reloadData() {
     const token = ++request;
+    if (visible) loom.finishConstruction();
     ++scenarioRequest;
     if (!scenarioResults.hidden) scenarioVariation.textContent = 'Consultando el periodo…';
     const showBoth = comparing;
@@ -1425,7 +1479,10 @@ function initDemoFlights() {
   selectSource();
   loadBundledRoutes();
   return {
-    restartExperience,
+    beginExperience() {
+      restartExperience();
+      loom.startConstruction();
+    },
     setVisible(value) {
       visible = value;
       if (!visible) closeExplorationPanels();

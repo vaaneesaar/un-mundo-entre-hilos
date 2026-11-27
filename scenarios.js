@@ -23,7 +23,8 @@ const LoomScenarios = (() => {
   // Fixed transfer function shared by all dates and emotions. At 8,000
   // equivalents the effect reaches half its fixed ceiling of 90%.
   function intensity(equivalents) {
-    return .90 * equivalents / (equivalents + 8000);
+    const weight = Math.sqrt(equivalents / 8000);
+    return .90 * weight / (1 + weight);
   }
 
   function compare(current, reference, percent) {

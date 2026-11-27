@@ -1167,3 +1167,23 @@ body:has(#cierre:not([hidden])) .method-footer summary { font-size: .75rem; }
   font-size: .74rem;
   line-height: 1.4;
 }
+
+.loom-construction {
+  position: absolute;
+  inset: auto .8rem .8rem auto;
+  z-index: 3;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .55rem;
+  padding: .45rem .6rem;
+  background: var(--deep);
+  border: 1px solid var(--line);
+  border-radius: .75rem;
+  font-size: .78rem;
+}
+.loom-construction[hidden], .thread-scenario[hidden] { display: none; }
+.loom-construction .button { min-height: 2rem; padding: .28rem .65rem; font-size: inherit; }
+.thread-scenario { display: grid; gap: .25rem; margin-top: .35rem; padding-top: .4rem; border-top: 1px solid var(--line); }
+#scenario-reading p, #scenario-narrative { margin: .3rem 0; line-height: 1.35; }
+#scenario-emotion { display: inline; }

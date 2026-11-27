@@ -5,21 +5,21 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#101B35">
   <title>Un mundo entre hilos</title>
-  <link rel="stylesheet" href="styles.css?v=conteo-interpretativo">
+  <link rel="stylesheet" href="styles.css?v=construccion-telar">
   <script src="flights.js?v=international" defer></script>
   <script src="destinations.js?v=country-filter" defer></script>
   <script src="materials.js?v=velo-textil" defer></script>
   <script src="embroidery.js?v=fase10" defer></script>
-  <script src="needle.js?v=bandas2" defer></script>
+  <script src="needle.js?v=ficha-interpretativa" defer></script>
   <script src="interpretations.js?v=escenarios-hipoteticos" defer></script>
-  <script src="loom.js?v=velo-textil" defer></script>
+  <script src="loom.js?v=construccion-telar" defer></script>
   <script src="calendar.js?v=fase10" defer></script>
   <script src="temporal.js" defer></script>
   <script src="providers.js?v=phase97" defer></script>
   <script src="historical.js?v=phase97" defer></script>
   <script src="travel-surveys.js?v=escenarios-hipoteticos" defer></script>
-  <script src="scenarios.js?v=conteo-interpretativo" defer></script>
-  <script src="script.js?v=conteo-interpretativo" defer></script>
+  <script src="scenarios.js?v=pulso-textil" defer></script>
+  <script src="script.js?v=construccion-telar" defer></script>
 </head>
 <body>
   <header class="site-header">
@@ -254,6 +254,50 @@
             <span data-sample-change></span>
             <div id="loom-sample-series" role="group" aria-label="Vuelos de la muestra por fecha UTC" hidden></div>
           </div>
+          <div id="emotion-disclosure" hidden>
+            <p class="emotion-active" role="status">Interpretación poética <span data-emotion-active></span></p>
+            <details id="emotion-story">
+              <summary data-emotion-title></summary>
+              <blockquote data-emotion-quote></blockquote>
+              <dl>
+                <dt>Lo que sabemos</dt><dd data-emotion-facts></dd>
+                <dt>Lo que interpretamos</dt><dd data-emotion-description></dd>
+              </dl>
+              <small>Interpretación artística, no medición de emociones de pasajeros.</small>
+            </details>
+            <section id="emotion-scenario" aria-label="Conteo interpretativo">
+              <p id="scenario-head" hidden><span id="scenario-emotion"></span> · <strong id="scenario-total"></strong> <span id="scenario-assumption"></span></p>
+              <div id="scenario-reading" hidden>
+                <p id="scenario-variation" role="status"></p>
+                <p id="scenario-base"></p>
+                <p id="scenario-coverage" hidden></p>
+              </div>
+              <p id="scenario-narrative"></p>
+              <form id="scenario-form">
+                <label for="scenario-percent">Tu supuesto (%)</label>
+                <input id="scenario-percent" type="number" min="0" max="100" step="any" inputmode="decimal" required>
+                <button type="submit">Aplicar supuesto</button>
+                <button id="scenario-clear" type="button" hidden>Quitar supuesto</button>
+              </form>
+              <div id="scenario-results" hidden>
+                <label for="scenario-reference">Periodo de referencia</label>
+                <select id="scenario-reference"></select>
+                <figure id="scenario-chart" hidden>
+                  <figcaption id="scenario-chart-label"></figcaption>
+                  <div class="scenario-bars" aria-hidden="true"></div>
+                  <details><summary>Ver valores de la gráfica</summary><ol></ol></details>
+                </figure>
+                <p id="scenario-source"></p>
+                <details id="scenario-method">
+                  <summary>Cómo se calcula</summary>
+                  <p>Multiplicamos los vuelos observados de la selección por el supuesto y redondeamos el total a equivalentes enteros. El supuesto es el mismo en ambos periodos. Si difieren la duración o la cobertura, comparamos el promedio por día con datos antes de redondear.</p>
+                  <p>El inicio del tramo iluminado depende del identificador de la hebra. Su extensión e intensidad crecen con los equivalentes mediante la escala fija 0.90 × √(cantidad ÷ 8,000) ÷ (1 + √(cantidad ÷ 8,000)). Los acentos ilustran el escenario. OpenSky no mide emociones de pasajeros.</p>
+                </details>
+              </div>
+              <small>Lectura artística basada en vuelos observados; no representa emociones medidas de pasajeros</small>
+              <p id="scenario-note">Elige un porcentaje para simularlo sobre los vuelos observados.</p>
+            </section>
+          </div>
         <details class="destination-context" id="destination-context" hidden>
           <summary id="destination-name"></summary>
           <div class="destination-details" aria-live="polite">
@@ -273,49 +317,14 @@
           </div>
         </details>
           <p id="visualization-note">Selecciona un país para descubrir su figura bordada.</p>
-          <div id="emotion-disclosure" hidden>
-            <p class="emotion-active" role="status">Interpretación poética <span data-emotion-active></span></p>
-            <details id="emotion-story">
-              <summary data-emotion-title></summary>
-              <blockquote data-emotion-quote></blockquote>
-              <dl>
-                <dt>Lo que sabemos</dt><dd data-emotion-facts></dd>
-                <dt>Lo que interpretamos</dt><dd data-emotion-description></dd>
-              </dl>
-              <small>Interpretación artística, no medición de emociones de pasajeros.</small>
-            </details>
-            <details id="emotion-scenario">
-              <summary>Conteo interpretativo · escenario hipotético</summary>
-              <p id="scenario-head" hidden><strong id="scenario-total"></strong> <span id="scenario-assumption"></span></p>
-              <form id="scenario-form">
-                <label for="scenario-percent">Tu supuesto (%)</label>
-                <input id="scenario-percent" type="number" min="0" max="100" step="any" inputmode="decimal" required>
-                <button type="submit">Aplicar supuesto</button>
-                <button id="scenario-clear" type="button" hidden>Quitar supuesto</button>
-              </form>
-              <div id="scenario-results" hidden>
-                <label for="scenario-reference">Periodo de referencia</label>
-                <select id="scenario-reference"></select>
-                <p id="scenario-variation" role="status"></p>
-                <p id="scenario-base"></p>
-                <figure id="scenario-chart" hidden>
-                  <figcaption id="scenario-chart-label"></figcaption>
-                  <div class="scenario-bars" aria-hidden="true"></div>
-                  <details><summary>Ver valores de la gráfica</summary><ol></ol></details>
-                </figure>
-                <p id="scenario-source"></p>
-                <details id="scenario-method">
-                  <summary>Cómo se calcula</summary>
-                  <p>Multiplicamos los vuelos observados de la selección por el supuesto y redondeamos el total a equivalentes enteros. El supuesto es el mismo en ambos periodos. Si difieren la duración o la cobertura, comparamos el promedio por día con datos antes de redondear.</p>
-                  <p>El inicio del tramo iluminado depende del identificador de la hebra. Su extensión e intensidad crecen con los equivalentes mediante la escala fija 0.90 × cantidad ÷ (cantidad + 8,000). Los acentos ilustran el escenario. OpenSky no mide emociones de pasajeros.</p>
-                </details>
-              </div>
-              <p id="scenario-note">Elige un porcentaje para simularlo sobre los vuelos observados.</p>
-            </details>
-          </div>
+
         </div>
         <div class="loom-art" id="loom-art-a">
           <canvas tabindex="0" aria-label="Telar interactivo. Acerca la aguja a una hebra y arrastra para tensarla." hidden></canvas>
+          <div class="loom-construction" hidden>
+            <span role="status">Tejiendo conexiones…</span>
+            <button class="button secondary" id="loom-skip" type="button">Saltar animación</button>
+          </div>
           <span class="needle-cursor" aria-hidden="true" hidden></span>
           <aside class="thread-info" aria-label="Ficha de la hebra" aria-live="polite" hidden>
             <small data-thread-label>Ficha de la hebra</small>
@@ -329,7 +338,12 @@
               <span data-thread-source></span>
             </div>
             <span data-thread-symbol hidden>Representación simbólica del destino</span>
-            <small class="thread-emotion">Interpretación artística · <span></span></small>
+            <section class="thread-scenario" aria-label="Lectura interpretativa" hidden>
+              <strong data-thread-scenario-title></strong>
+              <span data-thread-scenario-value></span>
+              <span data-thread-scenario-story></span>
+              <small>Escenario artístico. No indica la motivación real de quienes viajaron.</small>
+            </section>
             <span data-thread-state></span>
           </aside>
           <div class="loom-fallback" data-textile="loom" hidden></div>

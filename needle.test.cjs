@@ -138,6 +138,11 @@ test('two displaced threads persist, cancellation is local, and reset restores b
   assert.equal(resetting, false);
   assert.equal(interaction.getEdit(main.fiber.id), undefined);
   assert.equal(interaction.getEdit(second.fiber.id), undefined);
+  events.get('pointerdown')(pointer);
+  events.get('pointerup')(pointer);
+  assert.equal(card.hidden, false, 'A tap keeps the details of the selected thread visible');
+  assert.equal(count, 0);
+  interaction.clear();
   picked = neighbor;
   const mouse = { ...pointer, pointerType: 'mouse' };
   events.get('pointermove')(mouse);

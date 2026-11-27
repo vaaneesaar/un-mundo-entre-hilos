@@ -185,8 +185,16 @@ const TextileNeedle = (() => {
     function finish(event) {
       if (active?.pointer !== event.pointerId) return;
       const held = active;
+      const moved = Math.hypot(...held.offset) * held.scale >= 3;
+      if (!moved) {
+        active = null;
+        if (canvas.hasPointerCapture(event.pointerId)) canvas.releasePointerCapture(event.pointerId);
+        showCard(held.fiber, 'selected');
+        showNeedle();
+        wake();
+        return;
+      }
       clear();
-      if (!significant(held.offset)) return;
       const [x, y] = held.offset;
       const strokes = edits.get(held.fiber.id) ?? [];
       strokes.push({ t: held.t, x, y, length: Math.hypot(x, y) });
@@ -214,7 +222,7 @@ const TextileNeedle = (() => {
     canvas.addEventListener('pointercancel', event => { if (active?.pointer === event.pointerId) clear(); });
     canvas.addEventListener('lostpointercapture', event => { if (active?.pointer === event.pointerId) clear(); });
     document.addEventListener('pointerdown', event => {
-      if (selected && !canvas.contains(event.target)) clear();
+      if (selected && !event.target.closest('canvas, .thread-info, #emotion-disclosure, #emotion-panel, #emotion-toggle')) clear();
     });
 
     function update(now, scale, reduceMotion, onDemand) {

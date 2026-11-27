@@ -430,7 +430,7 @@ const TextileLoom = (() => {
     uniform vec4 pull;
     uniform float editWeight;
     uniform float highlight;
-    uniform float time, portrait, insertion, moving;
+    uniform float time, portrait, insertion, moving, construction;
     uniform mediump float expressionClock;
     uniform mediump vec4 expressionModes;
     varying vec3 vNormal, vColor;
@@ -507,6 +507,14 @@ const TextileLoom = (() => {
       vPhase = phase;
       vTension = tension;
       vEntry = threaded < .5 ? 1.0 : age;
+      if (construction < 6.0) {
+        bool rail = phase >= 72.0 && phase < 80.0;
+        float lane = mod(fiberCode, 8.0);
+        float edge = mod(fiberCode, 2.0) < .5 ? yarn.x : 1.0 - yarn.x;
+        float arrival = threaded > .5 ? 1.15 + floor(lane * .5) * .68 + edge * 1.75
+          : rail ? .04 : .36 + (1.0 - yarn.x) * .95;
+        vEntry = construction - arrival;
+      }
     }
   `;
   const fragmentSource = `
@@ -688,6 +696,14 @@ const TextileLoom = (() => {
     const expression = LoomInterpretations.transition();
     let expressionTime = 0, scenarioShare = 0, scenarioFiltered = false;
     let elapsed = 0, insertion = 0, previous = 0, failed = false;
+    let construction = 6, constructionWait = 0;
+    function finishConstruction() {
+      if (construction === 6) return;
+      construction = 6;
+      insertion = 10;
+      options.onConstruction?.(false);
+      schedule();
+    }
     let settled = new Set();
     let rebuildNeeded = true;
     let paused = false, frameReady = false, pickTarget, lastWidth, lastHeight;
@@ -774,6 +790,7 @@ const TextileLoom = (() => {
     }
 
     function showFallback() {
+      finishConstruction();
       dispose();
       failed = true;
       canvas.hidden = true;
@@ -803,7 +820,7 @@ const TextileLoom = (() => {
       const editLocation = gl.getAttribLocation(program, 'fiberEdit');
       gl.enableVertexAttribArray(editLocation);
       gl.vertexAttribPointer(editLocation, 4, gl.FLOAT, false, 16, 0);
-      uniforms = Object.fromEntries(['frame','sceneCenter','time','portrait','insertion','moving','pickView','picking','pull','editWeight','highlight','morph','layerProgress','layerWidth','layerTexture','embroideryPass','scenarioShare','expressionClock','expressionModes','expressionLow','expressionMid','expressionHigh','expressionFinish'].map(name => [name, gl.getUniformLocation(program, name)]));
+      uniforms = Object.fromEntries(['frame','sceneCenter','time','portrait','insertion','moving','construction','pickView','picking','pull','editWeight','highlight','morph','layerProgress','layerWidth','layerTexture','embroideryPass','scenarioShare','expressionClock','expressionModes','expressionLow','expressionMid','expressionHigh','expressionFinish'].map(name => [name, gl.getUniformLocation(program, name)]));
       gl.enable(gl.DEPTH_TEST);
       gl.enable(gl.BLEND);
       gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA, gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
@@ -847,7 +864,7 @@ const TextileLoom = (() => {
     }
 
     function pickFiber(point, tolerance) {
-      if (!frameReady || rebuildNeeded || !mesh || gl.isContextLost()) return null;
+      if (construction < 6 || !frameReady || rebuildNeeded || !mesh || gl.isContextLost()) return null;
       const width = host.clientWidth, height = host.clientHeight;
       if (width !== lastWidth || height !== lastHeight || point.x < 0 || point.y < 0 || point.x > width || point.y > height) return null;
       const size = TextileNeedle.pickSize, span = TextileNeedle.pickSpan;
@@ -947,6 +964,15 @@ const TextileLoom = (() => {
       gl.uniform2f(uniforms.frame, unit * 2 / width, unit * 2 / height);
       gl.uniform1f(uniforms.portrait, Number(quality.portrait));
       const delta = previous ? (now - previous) / 1000 : 0;
+      if (construction < 6) {
+        constructionWait += delta;
+        if (motion.matches || constructionWait >= 9) finishConstruction();
+        else if (data.routes.length || construction < 1.1) {
+          construction += Math.min(delta, .05);
+          if (construction >= 5.65) finishConstruction();
+        }
+      }
+      gl.uniform1f(uniforms.construction, construction);
       morph = motion.matches ? 1 : Math.min(1, morph + delta / .95);
       const easedMorph = morph * morph * (3 - 2 * morph);
       layerProgress = motion.matches ? 1 : Math.min(1, layerProgress + delta / layerDuration);
@@ -1005,7 +1031,7 @@ const TextileLoom = (() => {
           showFallback();
         }
       }
-      if ((!paused && !motion.matches) || morph < 1 || layerProgress < 1 || expression.active || needle.needsFrame()) schedule();
+      if (construction < 6 || (!paused && !motion.matches) || morph < 1 || layerProgress < 1 || expression.active || needle.needsFrame()) schedule();
     }
 
     function schedule() {
@@ -1091,7 +1117,7 @@ const TextileLoom = (() => {
       setVisible(value) {
         visible = value;
         if (value) schedule();
-        else { rememberSeated(); dispose(); previous = 0; }
+        else { finishConstruction(); rememberSeated(); dispose(); previous = 0; }
       },
       setScenario(intensity, filtered = false) {
         if (scenarioShare === intensity && scenarioFiltered === filtered) return;
@@ -1112,7 +1138,15 @@ const TextileLoom = (() => {
         comparison = value;
         refresh();
       },
+      startConstruction() {
+        if (motion.matches || failed) return;
+        construction = constructionWait = 0;
+        options.onConstruction?.(true);
+        schedule();
+      },
+      finishConstruction,
       restart() {
+        finishConstruction();
         if (paused) setPaused(false);
         settled.clear();
         elapsed = insertion = previous = 0;
