@@ -253,6 +253,7 @@ const TextileLoom = (() => {
     uniform float highlight;
     uniform float time, portrait, insertion, moving;
     uniform vec3 expressionMotion;
+    uniform vec2 expressionGesture;
     varying vec3 vNormal, vColor;
     varying vec2 vYarn, vCode;
     varying float vHighlight, vRetired, vWarp, vEdited;
@@ -290,7 +291,10 @@ const TextileLoom = (() => {
       float expression = expressionMotion.x * threaded * moving * envelope *
         (grabbed ? 0.0 : 1.0 - vEdited);
       float accent = sin(expressionMotion.y + threadPhase + yarn.x * 15.0);
-      p.z += expression * expressionMotion.z * .0022 * accent;
+      float spread = sin(expressionMotion.y + threadPhase * .43);
+      float crossing = sin(expressionMotion.y - fromEdge * 11.0 + threadPhase);
+      p.y += expression * expressionGesture.x * (spread + .20 * accent);
+      p.z += expression * expressionMotion.z * (.008 * accent + expressionGesture.y * crossing);
       float tilt = mix(.26, .16, portrait);
       if (threaded > .5 && dot(displacement, displacement) > .0000001) {
         float depth = (displacement.x - displacement.y) * .14;
@@ -354,9 +358,9 @@ const TextileLoom = (() => {
       float grain = twist * crossgrain * mix(.10, .045, satin) + twist * .035;
       grain += expression * expressionFinish.z * crossgrain;
       float contact = .93 - bundled * (.15 + expression * expressionFinish.w) * (1.0 - keyLight);
-      float light = (.42 + keyLight * .47 + warm * .13 + grain) * contact;
+      float light = (.39 + keyLight * .56 + warm * .16 + grain) * contact;
       light *= clamp(.91 + vDepth * .14, .62, 1.22);
-      light *= mix(1.12, .85, vWarp);
+      light *= mix(1.21, .81, vWarp);
       float tone = clamp(dot(vColor, vec3(.22, .65, .13)) * .8 + .20 * sin(threadPhase * 2.1), 0.0, 1.0);
       vec3 tinted = mix(mix(expressionLow, expressionMid, smoothstep(.0, .60, tone)),
         expressionHigh, smoothstep(.56, 1.0, tone));
@@ -518,7 +522,7 @@ const TextileLoom = (() => {
       const editLocation = gl.getAttribLocation(program, 'fiberEdit');
       gl.enableVertexAttribArray(editLocation);
       gl.vertexAttribPointer(editLocation, 4, gl.FLOAT, false, 16, 0);
-      uniforms = Object.fromEntries(['frame','sceneCenter','time','portrait','insertion','moving','pickView','picking','pull','editWeight','highlight','morph','layerProgress','layerWidth','layerTexture','embroideryPass','expressionMotion','expressionLow','expressionMid','expressionHigh','expressionFinish'].map(name => [name, gl.getUniformLocation(program, name)]));
+      uniforms = Object.fromEntries(['frame','sceneCenter','time','portrait','insertion','moving','pickView','picking','pull','editWeight','highlight','morph','layerProgress','layerWidth','layerTexture','embroideryPass','expressionMotion','expressionGesture','expressionLow','expressionMid','expressionHigh','expressionFinish'].map(name => [name, gl.getUniformLocation(program, name)]));
       gl.enable(gl.DEPTH_TEST);
       gl.enable(gl.BLEND);
       gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA, gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
@@ -657,7 +661,7 @@ const TextileLoom = (() => {
       gl.viewport(0, 0, pixelWidth, pixelHeight);
       const commonWidth = stackedComparison.matches ? width : Math.floor(host.parentElement.clientWidth / 2);
       const frame = comparison ? comparisonProjection(commonWidth, height, Boolean(embroidered)) : bounds;
-      const unit = comparison ? frame.unit : Math.min(width * .95 / frame.width, height * .93 / frame.height);
+      const unit = comparison ? frame.unit : Math.min(width * .97 / frame.width, height * .96 / frame.height);
       gl.uniform2f(uniforms.sceneCenter, frame.x, frame.y);
       gl.uniform2f(uniforms.frame, unit * 2 / width, unit * 2 / height);
       gl.uniform1f(uniforms.portrait, Number(quality.portrait));
@@ -671,10 +675,11 @@ const TextileLoom = (() => {
         elapsed += delta;
         insertion = Math.min(10, insertion + delta);
       }
-      const [strength, lr, lg, lb, mr, mg, mb, hr, hg, hb, finish, grain, contrast, speed, amplitude] =
+      const [strength, lr, lg, lb, mr, mg, mb, hr, hg, hb, finish, grain, contrast, speed, amplitude, spread, crossing] =
         expression.advance(Math.min(delta, .05), motion.matches);
       if (!paused && !motion.matches) expressionTime = (expressionTime + delta * 2.4 * speed) % (2 * Math.PI);
       gl.uniform3f(uniforms.expressionMotion, strength, expressionTime, amplitude);
+      gl.uniform2f(uniforms.expressionGesture, spread, crossing);
       gl.uniform3f(uniforms.expressionLow, lr, lg, lb);
       gl.uniform3f(uniforms.expressionMid, mr, mg, mb);
       gl.uniform3f(uniforms.expressionHigh, hr, hg, hb);

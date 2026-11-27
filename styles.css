@@ -784,3 +784,137 @@ body.intro-view { min-block-size: 100svh; display: grid; grid-template-rows: aut
   .loom-filter-bar > .button { padding-inline: .32rem; }
   .loom-filter-bar .compare-toggle[aria-pressed="true"] { white-space: normal; line-height: 1.1; }
 }
+
+/* Exhibition lighting and editorial surfaces shared by the three rooms. */
+:root {
+  --night: #10152b;
+  --deep: #1a2444;
+  --ice: #f2e9f6;
+  --sky: #b9c9f5;
+  --line: #b8b3e432;
+  --muted: #bdc2dc;
+}
+.site-header { background: #10152bed; }
+.wordmark { letter-spacing: -.015em; }
+.mark { font-size: 1rem; }
+.loom-view #telar {
+  padding-inline: clamp(.8rem, 2.3vw, 2.5rem);
+  background: radial-gradient(ellipse at 78% 29%, #25234a55, transparent 63%);
+}
+.loom-filter-bar {
+  padding-block: .5rem .64rem;
+  border-bottom-color: #a8a5d037;
+}
+.loom-filter-bar .destination-field,
+.loom-filter-bar #demo-date,
+.loom-filter-bar select,
+.loom-filter-bar > .button { border-radius: 1rem; }
+.loom-filter-bar > .button { background: transparent; }
+.loom-filter-bar > .button:hover { background: #b3a5e71a; }
+.loom-filter-bar #filter-visualization select { border-color: #ad99df79; }
+.loom-filter-bar #filter-visualization > span { color: #d7c0f0; }
+
+.loom-stage:not(.is-comparing) {
+  --data-rail: clamp(10.3rem, 15vw, 14.25rem);
+  --scene-footer: 3.1rem;
+}
+.loom-stage .loom-art {
+  --gallery-light: #6c5b9c45;
+  --gallery-fill: #2c47744f;
+  background:
+    radial-gradient(ellipse at 54% 43%, var(--gallery-light), transparent 63%),
+    radial-gradient(ellipse at 78% 64%, var(--gallery-fill), transparent 65%),
+    #11172e;
+}
+#telar[data-emotion="nostalgia"] .loom-art { --gallery-light: #61498e58; --gallery-fill: #37447038; }
+#telar[data-emotion="joy"] .loom-art { --gallery-light: #926c5652; --gallery-fill: #62457763; }
+#telar[data-emotion="anticipation"] .loom-art { --gallery-light: #4058a268; --gallery-fill: #6e53754a; }
+#telar[data-emotion="reunion"] .loom-art { --gallery-light: #98577948; --gallery-fill: #65448064; }
+.loom-stage:not(.is-comparing) .loom-art {
+  background:
+    radial-gradient(ellipse at 54% 43%, var(--gallery-light), transparent 63%),
+    radial-gradient(ellipse at 78% 64%, var(--gallery-fill), transparent 65%),
+    #11172e;
+}
+.loom-stage:not(.is-comparing) .loom-art::before {
+  content: ''; position: absolute; pointer-events: none; inset: .9rem .65rem;
+  border-block: 1px solid #ac9bd035;
+  background: linear-gradient(90deg, transparent, #ab9ac00d 38%, transparent 77%) top / 100% 4px no-repeat;
+}
+.loom-stage:not(.is-comparing) .loom-metric {
+  background: linear-gradient(150deg, #20203b88, #151a3188 38%, #10152b00 75%);
+  padding: 1.35rem .8rem .4rem .25rem;
+}
+.loom-metric .loom-sample-metric strong {
+  font-size: clamp(2.45rem, 4vw, 4.4rem);
+  font-variant-numeric: tabular-nums;
+}
+.loom-metric [data-sample-label] { color: #e1cce9; }
+.loom-metric [data-sample-source],
+.loom-metric [data-sample-detail] { line-height: 1.42; }
+.loom-metric [data-sample-source] { margin-block: .48rem .6rem; }
+#loom-sample-series:not([hidden]) { height: 1.85rem; margin-block: .65rem .8rem; }
+.loom-stage .loom-next { color: var(--ice); border-color: #b5a2e39c; font: italic 1rem var(--serif); }
+.loom-stage .loom-next:hover { background: #292546; }
+#emotion-disclosure:not([hidden]) {
+  margin-block: 1rem .35rem;
+  padding: .75rem .35rem .15rem .7rem;
+  border-inline-start: 1px solid #d9a6d6ad;
+  color: var(--ice);
+}
+#emotion-disclosure small { display: block; color: #e4bae8; font-size: .68rem; }
+#emotion-disclosure strong { display: block; margin-block: .2rem .35rem; font: italic 1.26rem var(--serif); }
+#emotion-disclosure p { color: var(--muted); line-height: 1.5; }
+#embroidery-description { display: block; color: #d2bce8; font-size: .72rem; }
+#embroidery-caption strong { font: italic 1.1rem var(--serif); }
+.comparison-periods { background: linear-gradient(90deg, #29234261, #2029444d); }
+.comparison-period h2 { color: #e1c5ef; font: italic 1.13rem var(--serif); }
+
+.intro-view .intro {
+  justify-items: center;
+  background: radial-gradient(ellipse at 54% 38%, #222044, #11172f 62%, #0d1226 100%);
+}
+.intro .intro-art { inset: 0; opacity: .85; }
+.intro::after { background: radial-gradient(ellipse at 50% 33%, #13183168 0%, transparent 55%); }
+.intro-card {
+  text-align: center; width: min(100%, 46rem); background: transparent;
+  box-shadow: none; border: 0; z-index: 1; margin-block-end: clamp(2rem, 10svh, 6rem);
+}
+.intro-card .eyebrow { color: #eed1ac; }
+.intro-card h1 em { color: #d9c2f1; }
+.intro-card > p:not(.eyebrow):not(.lead) { margin-inline: auto; max-width: 40ch; }
+.intro-card .lead { font: italic 400 clamp(1.3rem, 3vw, 2.15rem)/1.23 var(--serif); color: #f1d8c5; }
+.intro-card .primary { color: var(--ice); background: #151a33; border-color: #edd1a6aa; }
+.intro-card .primary:hover { background: #302643; }
+.intro-note { color: #bdb3df; }
+.intro-thread { z-index: 2; right: 13%; top: 57%; width: clamp(4.5rem, 10vw, 9rem); height: auto; aspect-ratio: 1; }
+.intro-thread svg { display: block; width: 100%; filter: drop-shadow(0 2px 6px #0d112c); }
+.ending {
+  background: radial-gradient(ellipse at 29% 48%, #37294e, transparent 62%);
+  grid-template-columns: minmax(0, 1.06fr) minmax(0, 1fr);
+  padding: clamp(1.2rem, 4vw, 3.4rem) clamp(1rem, 5vw, 5rem) 4rem;
+}
+.ending-art { grid-column: 1; grid-row: 1; width: 100%; aspect-ratio: 4 / 5; max-block-size: 75svh; overflow: hidden; }
+.ending-copy { grid-column: 2; grid-row: 1; }
+.ending h1 { font-size: clamp(2.35rem, 4.4vw, 4.6rem); }
+.ending h1 em, .ending blockquote { color: #dbc5f0; }
+.ending .process { gap: .6rem; font-size: .87rem; }
+
+@media (max-width: 780px) {
+  .ending { grid-template-columns: minmax(0, 1fr); }
+  .ending-copy { grid-column: 1; grid-row: 2; }
+  .ending-art { width: 100%; height: clamp(10rem, 35svh, 22rem); aspect-ratio: auto; }
+}
+@media (max-width: 700px) {
+  .loom-stage:not(.is-comparing) .loom-metric { padding: .5rem .3rem .25rem; }
+  .loom-metric .loom-sample-metric strong { font-size: 2.32rem; }
+  #loom-sample-series:not([hidden]) { height: 1.3rem; margin-block: .36rem; }
+  #emotion-disclosure:not([hidden]) { margin-block-start: .6rem; padding-block-start: .3rem; }
+  #emotion-disclosure strong { display: inline; margin-inline-start: .35rem; font-size: 1rem; }
+  #emotion-disclosure small { display: inline; }
+}
+@media (max-width: 840px) {
+  .intro-view .intro { grid-template-rows: 1fr auto; }
+  .intro-thread { position: absolute; inset: auto 5% 18% auto; width: 62px; margin: 0; }
+  .intro-card { margin-block-end: 2.5rem; }
+}

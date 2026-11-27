@@ -1,19 +1,19 @@
 const LoomInterpretations = (() => {
-  const neutral = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1];
-  const treatment = (palette, finish, grain, contrast, speed, amplitude) => [
+  const neutral = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0];
+  const treatment = (palette, finish, grain, contrast, speed, amplitude, spread, crossing) => [
     1, ...palette.flatMap(hex => hex.match(/../g).map(channel => parseInt(channel, 16) / 255)),
-    finish, grain, contrast, speed, amplitude
+    finish, grain, contrast, speed, amplitude, spread, crossing
   ];
   const presets = new Map([
     ['neutral', { label: 'Sin interpretación', values: neutral }],
     ['joy', { label: 'Felicidad', description: 'La luz se abre entre los hilos. Los tonos cálidos y la seda luminosa celebran las conexiones que un viaje hace posibles.', values: treatment(
-      ['64B9F4', 'F47FA6', 'F7BF3B'], .72, -.035, .02, 1.32, 1.35) }],
+      ['64B9F4', 'F47FA6', 'F7BF3B'], .72, -.035, .02, 1.32, 1.35, .064, .032) }],
     ['nostalgia', { label: 'Nostalgia', description: 'En lilas y violetas, los hilos toman un ritmo más lento. La distancia deja espacio para recordar lugares y personas.', values: treatment(
-      ['243A68', 'A38BE8', 'DCDFFF'], -.62, .055, -.025, .57, .60) }],
+      ['243A68', 'A38BE8', 'DCDFFF'], -.62, .055, -.025, .57, .60, .017, .014) }],
     ['anticipation', { label: 'Expectativa', description: 'El azul eléctrico y los acentos dorados marcan un pulso de anticipación. Las fibras sugieren la tensión de lo que está por comenzar.', values: treatment(
-      ['474292', '64B9F4', 'F7BF3B'], .12, .072, .075, 1.18, .85) }],
+      ['474292', '64B9F4', 'F7BF3B'], .12, .072, .075, 1.18, .85, .021, .078) }],
     ['reunion', { label: 'Reencuentro', description: 'Los rosas cálidos destacan los cruces. Las hebras parecen acercarse, como vínculos que vuelven a encontrarse.', values: treatment(
-      ['64B9F4', 'F47FA6', 'DCDFFF'], .27, .035, .12, .88, 1.07) }]
+      ['64B9F4', 'F47FA6', 'DCDFFF'], .27, .035, .12, .88, 1.07, .044, .045) }]
   ]);
   const get = id => presets.get(id) ?? presets.get('neutral');
 

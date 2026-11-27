@@ -5,19 +5,19 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#101B35">
   <title>Un mundo entre hilos</title>
-  <link rel="stylesheet" href="styles.css?v=toolbar963b">
+  <link rel="stylesheet" href="styles.css?v=fase10">
   <script src="flights.js?v=international" defer></script>
   <script src="destinations.js?v=country-filter" defer></script>
-  <script src="materials.js" defer></script>
-  <script src="embroidery.js?v=toolbar963b" defer></script>
-  <script src="needle.js?v=toolbar963b" defer></script>
-  <script src="interpretations.js?v=toolbar963b" defer></script>
-  <script src="loom.js?v=international" defer></script>
-  <script src="calendar.js?v=toolbar963b" defer></script>
+  <script src="materials.js?v=fase10" defer></script>
+  <script src="embroidery.js?v=fase10" defer></script>
+  <script src="needle.js?v=fase10" defer></script>
+  <script src="interpretations.js?v=fase10" defer></script>
+  <script src="loom.js?v=fase10" defer></script>
+  <script src="calendar.js?v=fase10" defer></script>
   <script src="temporal.js" defer></script>
   <script src="providers.js?v=phase97" defer></script>
   <script src="historical.js?v=phase97" defer></script>
-  <script src="script.js?v=phase97" defer></script>
+  <script src="script.js?v=fase10" defer></script>
 </head>
 <body>
   <header class="site-header">
@@ -34,13 +34,13 @@
     <section id="inicio" class="screen intro" aria-labelledby="intro-title">
       <div class="intro-art" data-textile="curtain" aria-hidden="true"></div>
       <div class="intro-copy intro-card" id="intro-card">
-        <p class="eyebrow">Explicación de la interfaz</p>
+        <p class="eyebrow">El primer hilo</p>
         <h1 id="intro-title" tabindex="-1">Un mundo<br> <em>entre hilos</em></h1>
         <p class="lead">Todo vínculo comienza con un movimiento.</p>
         <p>Los vuelos observados se convierten en hilos. Explora un lugar y una fecha para descubrir cómo sus conexiones forman un tejido compartido.</p>
         <a class="button primary" id="begin" href="#telar">Comenzar a tejer</a>
       </div>
-      <button class="intro-thread" type="button" aria-label="Deslizar el primer hilo para comenzar" title="Desliza el hilo para comenzar"><span aria-hidden="true"></span></button>
+      <button class="intro-thread" type="button" aria-label="Deslizar el primer hilo para comenzar" title="Desliza el hilo para comenzar"><svg aria-hidden="true" viewBox="0 0 100 100"><defs><linearGradient id="first-needle-metal" x2="0" y2="1"><stop stop-color="#74698a"/><stop offset=".36" stop-color="#fff4e9"/><stop offset=".68" stop-color="#a7b3cb"/><stop offset="1" stop-color="#4e4e70"/></linearGradient></defs><g transform="rotate(-42 50 50)"><path d="M7 50 29 46h56a4 4 0 0 1 0 8H29Z" fill="url(#first-needle-metal)"/><path d="M74 50h10" stroke="#18152a" stroke-width="2.4" stroke-linecap="round"/><path d="M82 50q18 11 10 23" fill="none" stroke="#f7c772" stroke-width="2"/></g></svg></button>
       <p class="intro-note">El mundo como un telar de vínculos</p>
     </section>
 
@@ -206,14 +206,14 @@
         </div>
         <div class="comparison-periods">
           <section class="comparison-period" id="comparison-a">
-            <h2>Periodo A</h2><label>Fecha A (UTC) <select id="comparison-day-a"></select></label>
+            <h2>Periodo A</h2><label>Cambiar fecha de A (UTC) <select id="comparison-day-a"></select></label>
             <p data-period-date></p>
             <p class="comparison-value"><strong data-period-value>—</strong> <span data-period-unit></span></p>
             <p data-period-coverage></p>
             <p data-period-destination hidden></p>
           </section>
           <section class="comparison-period" id="comparison-b">
-            <h2>Periodo B</h2><label>Fecha B (UTC) <select id="comparison-day"></select></label>
+            <h2>Periodo B</h2><label>Cambiar fecha de B (UTC) <select id="comparison-day"></select></label>
             <p data-period-date></p>
             <p class="comparison-value"><strong data-period-value>—</strong> <span data-period-unit></span></p>
             <p data-period-coverage></p>
@@ -261,7 +261,9 @@
           </div>
         </details>
           <p id="visualization-note">Selecciona un país para descubrir su figura bordada.</p>
-          <small id="emotion-disclosure" role="status" hidden></small>
+          <div id="emotion-disclosure" role="status" hidden>
+            <small>Interpretación poética</small><strong></strong><p></p>
+          </div>
         </div>
         <div class="loom-art" id="loom-art-a">
           <canvas tabindex="0" aria-label="Telar interactivo. Acerca la aguja a una hebra y arrastra para tensarla." hidden></canvas>
@@ -301,7 +303,7 @@
 
     <section id="cierre" class="screen ending" aria-labelledby="ending-title" hidden>
       <div class="ending-copy">
-        <p class="eyebrow">Resumen del proceso</p>
+        <p class="eyebrow">Lo que permanece</p>
         <h1 id="ending-title" tabindex="-1">No todas las distancias se miden <em>en kilómetros.</em></h1>
         <div class="process">
           <section>

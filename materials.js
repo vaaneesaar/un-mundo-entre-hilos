@@ -16,18 +16,18 @@ const LoomMaterials = (() => {
     if (kind === 'braid') {
       const turns = lod < .8 ? 8 : 12;
       return { kind, code: names[kind], steps: turns * 7, parts: [0, 1, 2].map(i =>
-        ({ ...part(radius * .92, radius * .92, radius * .67, [.86, 1.03, 1.15][i], turns, tau * i / 3),
+        ({ ...part(radius * 1.08, radius * 1.08, radius * .81, [.86, 1.03, 1.15][i], turns, tau * i / 3),
           gathering: strength })) };
     }
     if (kind === 'mesh' || kind === 'band') {
       const open = kind === 'mesh';
-      const width = (open ? .105 : .067) + (open ? .16 : .11) * strength;
+      const width = (open ? .128 : .080) + (open ? .18 : .13) * strength;
       const count = lod < .8 ? 3 : open ? 4 : 6;
       const turns = lod < .8 ? 4 : open ? 6 : 8;
       const parts = Array.from({ length: count }, (_, i) => {
         const across = i * 2 / (count - 1) - 1;
         return part(width * across, (1 - across ** 2) * width * .32,
-          radius * (open ? .54 : .66), i % 2 ? .91 : 1.05);
+          radius * (open ? .58 : .72), i % 2 ? .91 : 1.05);
       });
       parts.push(part(width, width * .31, radius * .52, 1.14, turns, 0));
       if (lod >= .8) parts.push(part(width, width * .31, radius * .48, .86, turns, Math.PI));

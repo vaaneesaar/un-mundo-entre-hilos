@@ -22,24 +22,23 @@ function createTextile(host, viewBox, preserveAspectRatio = 'xMidYMid meet') {
 }
 
 function mountCurtain(host) {
-  const draw = createTextile(host, '0 0 900 780', 'xMidYMid slice');
-  for (let index = 0; index < 158; index++) {
-    const x = 28 + index * 5.5;
-    const drift = Math.sin(index * .19) * 28;
-    const length = 490 + 100 * Math.sin(index * .058) + 130 * Math.cos(index * .029) ** 2;
-    const highlight = index === 86;
-    draw(
-      `M ${x} -24 C ${x - drift} 205 ${x + drift * 2} 365 ${x + drift} ${length}`,
-      highlight ? '#F7BF3B' : fiberColors[index % fiberColors.length],
-      highlight ? .95 : .1 + .32 * Math.cos(index * 1.3) ** 2,
-      highlight ? 2 : .65 + .55 * Math.sin(index * 1.8) ** 2
-    );
-    if (index % 6 === 0) {
-      draw(`M ${x + 1.1} -24 C ${x - drift + 2} 205 ${x + drift * 2 - 1} 365 ${x + drift} ${length - 4}`,
-        '#A9C1FD', .16, 1);
-    }
-    if (highlight) draw(`M ${x + drift} ${length - 2} l 0 55`, '#F7BF3B', .65, 1.5);
+  const draw = createTextile(host, '0 0 1440 800', 'xMidYMid slice');
+  for (let index = 0; index < 42; index++) {
+    const side = index < 21 ? 0 : 1;
+    const strand = index % 21;
+    const x = side ? 1090 + strand * 20 : 40 + strand * 16;
+    const drift = Math.sin(index * 1.9) * 70;
+    const hue = fiberColors[index % fiberColors.length];
+    const path = offset =>
+      `M ${x + offset} -25 C ${x + drift + offset} 190 ${x - drift + offset} 540 ${x + drift * .54 + offset} 835`;
+    draw(path(0), hue, .17 + .28 * Math.cos(index * 1.3) ** 2, 1.2 + index % 5 * .38);
+    draw(path(1.6), hue, .12, .65);
   }
+  const firstThread = 'M -40 665 C 290 425 405 625 725 629 S 1150 560 1458 432';
+  draw(firstThread, '#F7BF3B', .11, 16);
+  draw(firstThread, '#D69039', .72, 5.5);
+  draw(firstThread, '#F7C772', .98, 2.8);
+  draw('M -40 663 C 290 422 405 622 725 627 S 1150 557 1458 430', '#FFF0BB', .82, .75);
 }
 
 function mountLoomPreview(host) {
@@ -71,24 +70,35 @@ function mountLoomPreview(host) {
 }
 
 function mountClosingWeave(host) {
-  const draw = createTextile(host, '0 0 600 600');
-  for (let index = 0; index < 124; index++) {
-    const ratio = index / 123;
-    const y = 82 + ratio * 425;
-    const x = 68 + ratio * 450;
-    const curve = 88 * Math.sin(ratio * Math.PI * 2);
-    draw(
-      `M ${66 + curve * .45} ${y} C 202 ${y - 101 + curve} 375 ${y + 95 + curve} ${526 - curve * .42} ${y - 27}`,
-      fiberColors[(index + 2) % fiberColors.length], .16 + .42 * Math.sin(index * .25) ** 2
-    );
-    if (index % 4 === 0) {
-      draw(`M ${76 + curve * .42} ${y + 1} C 207 ${y - 103 + curve} 380 ${y + 98 + curve} ${514 - curve * .42} ${y - 25}`,
-        '#A9C1FD', .26, 1.15);
+  const draw = createTextile(host, '0 0 680 810', 'xMidYMid slice');
+  const colors = ['#9A82DE', '#D08AAC', '#79B8E2', '#AA91E9', '#DCAB69', '#BDB4F1'];
+  for (let column = 0; column < 40; column++) {
+    const x = 20 + column * 15;
+    const drift = 12 * Math.sin(column * 1.9);
+    draw(`M ${x} -15 Q ${x + drift} 375 ${x - drift} 825`, colors[column % colors.length], .31, 1);
+  }
+
+  for (let strip = 0; strip < 8; strip++) {
+    const hue = colors[strip % colors.length];
+    const center = 75 + 83 * strip;
+    const point = (t, across) => {
+      const fold = Math.sin(t * 9 + strip * 1.35);
+      const width = (27 + strip % 3 * 10) * Math.sin(.38 + t * 2.65);
+      return [
+        670 * t - 45 + across * width * fold * .28,
+        center + t * 122 + fold * (47 + 6 * strip) + across * width * Math.cos(t * 5 + strip)
+      ];
+    };
+    const path = points => points.map(([x,y], i) => `${i ? 'L' : 'M'} ${x.toFixed(1)} ${y.toFixed(1)}`).join(' ');
+    for (let filament = 0; filament < 24; filament++) {
+      const row = filament / 23 * 2 - 1;
+      const points = Array.from({ length: 45 }, (_, i) => point(i / 44, row));
+      draw(path(points), hue, filament % 6 ? .34 : .66, filament % 6 ? .85 : 1.48);
     }
-    draw(
-      `M ${x} ${72 + curve * .4} C ${x + 135 - curve} 192 ${x - 157 - curve} 370 ${x + 21} ${515 + curve * .27}`,
-      fiberColors[index % fiberColors.length], .11 + .36 * Math.cos(index * .51) ** 2
-    );
+    for (let stitch = 0; stitch < 52; stitch++) {
+      const t = stitch / 51;
+      draw(path(Array.from({ length: 9 }, (_, i) => point(t + (i - 4) * .0009, i / 4 - 1))), hue, .40, .85);
+    }
   }
 }
 
@@ -499,8 +509,8 @@ function initDemoFlights() {
     activeEmotion = id;
     const preset = LoomInterpretations.get(id);
     disclosure.hidden = id === 'neutral';
-    disclosure.textContent = preset.label + ' · Interpretación artística';
-    disclosure.title = preset.description ?? '';
+    disclosure.querySelector('strong').textContent = preset.label;
+    disclosure.querySelector('p').textContent = preset.description ?? '';
     for (const option of emotionOptions.children) {
       option.setAttribute('aria-pressed', String(option.dataset.emotion === id));
     }
@@ -616,22 +626,23 @@ function initDemoFlights() {
     direction.disabled = !destination || Boolean(originCountry);
     Array.from(layers.options).slice(1).forEach(option => { option.disabled = !place; });
     layers.value = state.layer;
-    const symbol = LoomEmbroidery.forDestination(state.destinationId);
+    const symbol = destination?.type === 'country' ? LoomEmbroidery.forDestination(destination.id) : null;
     if (!symbol) state.visualization = 'connections';
     if (symbol && !matches.flightCount) state.visualization = 'connections';
     const showingFigure = state.visualization === 'figure' && Boolean(symbol);
     const routeIds = new Set(matches.matched.keys());
     figureOption.disabled = !symbol || !matches.flightCount;
     visualization.value = state.visualization;
-    note.hidden = Boolean(symbol && matches.flightCount);
-    note.textContent = !destination ? 'Selecciona un país para descubrir su figura bordada.'
+    note.hidden = showingFigure;
+    note.textContent = destination?.type !== 'country' ? 'Selecciona un país para descubrir su figura bordada.'
       : !symbol ? 'Este destino todavía no cuenta con una figura bordada.'
-        : !matches.flightCount ? 'La figura requiere vuelos observados para esta selección.' : 'Figura bordada disponible: ' + symbol.name + '.';
+        : !matches.flightCount ? 'La figura requiere vuelos observados para esta selección.' : 'Elige Figura bordada para ver la lectura poética de ' + destination.name + '.';
     embroideryCaption.hidden = !showingFigure;
     compactDescription.hidden = !showingFigure;
     if (showingFigure) {
       embroideryName.textContent = symbol.name;
-      embroideryDescription.textContent = compactDescription.textContent = symbol.description;
+      embroideryDescription.textContent = 'Lectura poética de ' + destination.name;
+      compactDescription.textContent = symbol.description;
       embroideryCount.textContent = matches.flightCount
         ? `${format.format(matches.flightCount)} ${isDemo() ? 'vuelos de demostración' : 'vuelos de la muestra'} del destino`
         : 'No hay conexiones para bordar en el periodo y sentido seleccionados.';
