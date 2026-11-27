@@ -984,3 +984,25 @@ body:has(#cierre:not([hidden])) .method-footer summary { font-size: .75rem; }
   .ending-copy { grid-column: 1; grid-row: 2; padding: 1.35rem clamp(1rem, 5vw, 2.5rem) 2rem; }
   .ending h1 { font-size: clamp(1.85rem, 7.5vw, 3.3rem); }
 }
+
+/* The needle and gold fiber share the artwork coordinates; the button is its hit area. */
+.intro-view .intro { background: radial-gradient(ellipse at 77% 63%, #1c2347 0, transparent 43%),
+  radial-gradient(ellipse at 18% 70%, #202149b3, transparent 45%), #0e152c; }
+.intro .intro-art { z-index: -1; pointer-events: none; }
+.intro::after { z-index: -2; }
+.intro .intro-thread {
+  position: absolute;
+  inset: 59% auto auto 73%;
+  z-index: 2;
+  width: 17%;
+  height: 24%;
+  min-height: 44px;
+  min-width: 44px;
+  max-width: 25%;
+  margin: 0;
+  aspect-ratio: auto;
+  border-radius: 50%;
+}
+@media (min-width: 841px) and (max-height: 760px) {
+  .intro-view .intro { padding-block: clamp(1rem, 3.8svh, 2rem); }
+}

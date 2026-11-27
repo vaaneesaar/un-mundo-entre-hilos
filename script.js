@@ -22,28 +22,124 @@ function createTextile(host, viewBox, preserveAspectRatio = 'xMidYMid meet') {
 }
 
 function mountCurtain(host) {
-  const draw = createTextile(host, '0 0 1440 800', 'xMidYMid slice');
-  for (let index = 0; index < 42; index++) {
-    const side = index < 21 ? 0 : 1;
-    const strand = index % 21;
-    const x = side ? 1090 + strand * 20 : 40 + strand * 16;
-    const drift = Math.sin(index * 1.9) * 70;
-    const hue = fiberColors[index % fiberColors.length];
-    const path = offset =>
-      `M ${x + offset} -25 C ${x + drift + offset} 190 ${x - drift + offset} 540 ${x + drift * .54 + offset} 835`;
-    draw(path(0), hue, .17 + .28 * Math.cos(index * 1.3) ** 2, 1.2 + index % 5 * .38);
-    draw(path(1.6), hue, .12, .65);
+  const draw = createTextile(host, '0 0 1440 800', 'none');
+  const svg = host.firstElementChild;
+  svg.insertAdjacentHTML('afterbegin', `<defs>
+    <filter id="intro-soft"><feGaussianBlur stdDeviation="5"/></filter>
+    <filter id="intro-amber"><feGaussianBlur stdDeviation="4"/></filter>
+    <radialGradient id="intro-contact">
+      <stop stop-color="#ffca68" stop-opacity=".47"/><stop offset=".32" stop-color="#ff9e38" stop-opacity=".21"/>
+      <stop offset="1" stop-color="#ff9e38" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="intro-steel" x2="0" y2="1">
+      <stop stop-color="#676c86"/><stop offset=".19" stop-color="#c7c9d6"/>
+      <stop offset=".38" stop-color="#fff7e9"/><stop offset=".56" stop-color="#a5b0c6"/>
+      <stop offset=".78" stop-color="#58536b"/><stop offset=".91" stop-color="#bb8468"/>
+      <stop offset="1" stop-color="#312945"/>
+    </linearGradient>
+  </defs>`);
+  const palette = ['#9f94db', '#648fda', '#f27cb6', '#b38df0', '#cdd9f7'];
+  const polyline = points => points.map(([x,y], i) => `${i ? 'L' : 'M'}${x.toFixed(2)} ${y.toFixed(2)}`).join(' ');
+  for (let i = 0; i < 32; i++) {
+    const x = i < 16 ? 12 + i * 19 : 1102 + (i - 16) * 23;
+    const color = palette[(i * 3 + Math.floor(i / 5)) % palette.length];
+    const thickness = 1.8 + (i % 6) * .76;
+    const points = Array.from({length: 104}, (_, j) => {
+      const t = j / 103;
+      return [x + (18 + (i % 9) * 4) * Math.sin(t * 3.8 + i * 2.4) + 12 * t * Math.cos(i), -25 + 850 * t];
+    });
+    draw(polyline(points), color, .25 + (i % 4) * .11, thickness);
+    for (let ply = 0; ply < 3; ply++) {
+      draw(polyline(points.map(([px,y], j) =>
+        [px + Math.sin(j * .83 + ply * 2.094) * thickness * .43, y])), color, .36, .64);
+    }
+    if (i % 4 === 0) {
+      draw(polyline(points.map(([px,y], j) => [px + Math.sin(j * 1.8) * thickness * .56, y])), '#e8ddff', .33, .65);
+    }
   }
-  const firstThread = 'M -40 665 C 290 425 405 625 725 629 S 1150 560 1458 432';
-  draw(firstThread, '#F7A640', .47, 10);
-  host.firstElementChild.lastElementChild.classList.add('first-thread-halo');
-  draw(firstThread, '#E79B41', .92, 4.6);
-  draw(firstThread, '#FFD180', .98, 2.35);
-  draw(firstThread, '#FFF0B5', .80, .65);
-  const goldTwist = host.firstElementChild.lastElementChild;
-  goldTwist.setAttribute('stroke-dasharray', '1.3 3.8');
-  goldTwist.setAttribute('transform', 'translate(0 1.5)');
-  draw('M -40 663 C 290 422 405 622 725 627 S 1150 557 1458 430', '#FFF0BB', .82, .75);
+
+  const eye = 1260;
+  const knots = [[-30,695,-.66],[325,620,.01],[755,678,.07],[1060,655,-.53],[eye,492,-.68],[1301,486,.43],[1470,565,.03]];
+  const samples = knots.slice(0,-1).flatMap(([x,y,slope], i) => {
+    const [endX,endY,endSlope] = knots[i+1];
+    const length = endX - x;
+    return Array.from({length: Math.ceil(length / 2.8) + 1}, (_, j) => {
+      const t = Math.min(1,j * 2.8 / length);
+      const a = t*t*(3-2*t);
+      return [x + length*t, y * (1-a) + endY * a + length*t*(1-t)*(slope*(1-t)-endSlope*t)];
+    });
+  });
+  const yarn = [];
+  function strand(color, opacity, width, twist = 0, phase = 0, bloom = false) {
+    draw('', color, opacity, width);
+    const node = svg.lastElementChild;
+    if (bloom) node.setAttribute('filter','url(#intro-amber)');
+    yarn.push({node, twist, phase});
+  }
+  strand('#FF9E33', .44, 12, 0, 0, true);
+  strand('#95601e', .95, 6.2);
+  strand('#F7BF3B', .95, 4.15);
+  strand('#FFB443', .9, 1.55, 2.15);
+  strand('#FFE5A0', .94, 1.35, 1.85, 2.1);
+  strand('#fff2c8', .85, .82, 1.5, 4.2);
+  strand('#FFE5A0', .77, .62, 2.82, .7);
+
+  draw('', '#f4a445', .34, .62);
+  const fluff = svg.lastElementChild;
+  svg.insertAdjacentHTML('beforeend', `<g class="intro-needle-art">
+    <ellipse cx="1260" cy="492" rx="71" ry="77" fill="url(#intro-contact)"/>
+    <path d="M1060 646 Q1120 606 1259 492" stroke="#f9ae48" stroke-width="14" opacity=".17" filter="url(#intro-amber)" fill="none"/>
+    <g transform="translate(1060 646) rotate(-38)">
+      <path d="M0 0 Q36-3 66-6 L241-7 Q260-7 261 0 Q260 8 241 8 L66 6 Q36 3 0 0Z
+        M225 0 Q241-5 254-2 Q259 0 254 3 Q241 6 225 0Z" fill="url(#intro-steel)" fill-rule="evenodd"/>
+      <path d="M15-.45 Q71-2.8 220-5 M226-1 Q243-5 254-2" fill="none" stroke="#fff7e9" opacity=".77" stroke-width="1"/>
+    </g>
+  </g>`);
+  const needle = svg.lastElementChild;
+  const eyeThread = document.createElementNS(svgNamespace,'path');
+  eyeThread.setAttribute('d','M1251 496 Q1258 491 1266 489');
+  eyeThread.setAttribute('fill','none');
+  eyeThread.setAttribute('stroke','#FFE5A0');
+  eyeThread.setAttribute('stroke-linecap','round');
+  eyeThread.setAttribute('stroke-width','2.5');
+  needle.append(eyeThread);
+
+  for (const [path,color,width] of [
+    ['M-45 800 C20 630 48 320 140 -35','#aa8feb',9],
+    ['M-58 738 C88 753 205 824 370 843','#8d75d6',12],
+    ['M1030 834 C1200 771 1319 714 1475 654','#c6b8f1',10],
+    ['M1110 831 C1260 751 1358 776 1475 806','#d76bb3',8]
+  ]) {
+    draw(path,color,.51,width);
+    svg.lastElementChild.setAttribute('filter','url(#intro-soft)');
+  }
+
+  function drawPull(pixels) {
+    const pull = pixels * 800 / Math.max(1,host.clientHeight);
+    const deform = (x,y) => y + pull * Math.exp(-(((x-eye)/185)**2));
+    for (const {node,twist,phase} of yarn) {
+      node.setAttribute('d',polyline(samples.map(([x,y]) =>
+        [x,deform(x,y) + Math.sin(x * .59 + phase) * twist + .25 * Math.sin(x * 1.1)])));
+    }
+    fluff.setAttribute('d',samples.filter((_,i) => i % 3 === 0).map(([x,y],i) => {
+      const side = i % 2 ? 1 : -1;
+      const base = deform(x,y);
+      const tip = (4 + 3 * Math.sin(i * 7.4)) * side;
+      return `M${x.toFixed(1)} ${base.toFixed(1)} q2 ${tip.toFixed(1)} 5 ${(tip * .85).toFixed(1)}`;
+    }).join(' '));
+    needle.setAttribute('transform', `translate(0 ${pull})`);
+  }
+  drawPull(0);
+  let frame = 0;
+  let displacement = 0;
+  host.addEventListener('intro-pull', event => {
+    displacement = event.detail;
+    if (frame) return;
+    frame = requestAnimationFrame(() => {
+      frame = 0;
+      drawPull(displacement);
+    });
+  });
 }
 
 function mountLoomPreview(host) {
@@ -212,6 +308,11 @@ function initIntro(screen, restart) {
   });
 
   const thread = screen.querySelector('.intro-thread');
+  const art = screen.querySelector('.intro-art');
+  const setPull = distance => {
+    thread.style.setProperty('--pull', distance + 'px');
+    art.dispatchEvent(new CustomEvent('intro-pull', { detail: distance }));
+  };
   let drag;
   thread.addEventListener('pointerdown', event => {
     if (event.button !== 0 || drag) return;
@@ -221,18 +322,24 @@ function initIntro(screen, restart) {
   thread.addEventListener('pointermove', event => {
     if (drag?.id !== event.pointerId) return;
     const distance = Math.max(-82, Math.min(82, event.clientY - drag.y));
-    thread.style.setProperty('--pull', distance + 'px');
+    setPull(distance);
+  });
+  thread.addEventListener('pointerup', event => {
+    if (drag?.id === event.pointerId) begin.click();
   });
   thread.addEventListener('lostpointercapture', () => {
     drag = null;
-    thread.style.removeProperty('--pull');
+    if (!transition) setPull(0);
   });
-  thread.addEventListener('click', () => begin.click());
+  thread.addEventListener('click', event => {
+    if (event.detail === 0) begin.click();
+  });
 
   return function resetIntro() {
     transition?.cancel();
     transition = undefined;
     screen.classList.remove('intro-leaving');
+    setPull(0);
   };
 }
 
