@@ -4653,9 +4653,21 @@
       "month": "2023-12",
       "file": "adsblol-2023-12.json",
       "license": "ODbL-1.0",
-      "sha256": "fac27d395f6f9270eb9ec4865ad9f7b59ec54d970c124b095ec685868d2ffe48",
-      "original": "https://github.com/adsblol/globe_history_2023/releases/tag/v2023.12.30-planes-readsb-prod-0",
+      "sha256": "5ce6637928b4ee277218dc8ae1e9960bf9f2c968932e0566034d840d4065fdad",
+      "releases": {
+        "2023-12-28": "https://github.com/adsblol/globe_history_2023/releases/tag/v2023.12.28-planes-readsb-prod-0",
+        "2023-12-29": "https://github.com/adsblol/globe_history_2023/releases/tag/v2023.12.29-planes-readsb-prod-0",
+        "2023-12-30": "https://github.com/adsblol/globe_history_2023/releases/tag/v2023.12.30-planes-readsb-prod-0"
+      },
       "days": [
+        [
+          "2023-12-28",
+          2361
+        ],
+        [
+          "2023-12-29",
+          2266
+        ],
         [
           "2023-12-30",
           1817
@@ -4666,9 +4678,21 @@
       "month": "2024-12",
       "file": "adsblol-2024-12.json",
       "license": "ODbL-1.0",
-      "sha256": "e4a2b4b497b3dc279880a7f1c8a21d07204e1ebd8574a455672439be50e1b4ad",
-      "original": "https://github.com/adsblol/globe_history_2024/releases/tag/v2024.12.30-planes-readsb-prod-0",
+      "sha256": "62a1ef14e54f61d62022902dc6b058e27e9b515f51a2725be606e1fa6bac6e6a",
+      "releases": {
+        "2024-12-28": "https://github.com/adsblol/globe_history_2024/releases/tag/v2024.12.28-planes-readsb-prod-0",
+        "2024-12-29": "https://github.com/adsblol/globe_history_2024/releases/tag/v2024.12.29-planes-readsb-prod-0",
+        "2024-12-30": "https://github.com/adsblol/globe_history_2024/releases/tag/v2024.12.30-planes-readsb-prod-0"
+      },
       "days": [
+        [
+          "2024-12-28",
+          3526
+        ],
+        [
+          "2024-12-29",
+          3537
+        ],
         [
           "2024-12-30",
           3765
@@ -4679,9 +4703,21 @@
       "month": "2025-12",
       "file": "adsblol-2025-12.json",
       "license": "ODbL-1.0",
-      "sha256": "1542e07efac1243fec1555d2eceebf1970b4b210f8f2eb7c61add2a53d91b89e",
-      "original": "https://github.com/adsblol/globe_history_2025/releases/tag/v2025.12.30-planes-readsb-prod-0",
+      "sha256": "1ba4d186b690691e8497ae7b6f992a20d076a1ae1b73c5293eaa659b125a2cd1",
+      "releases": {
+        "2025-12-28": "https://github.com/adsblol/globe_history_2025/releases/tag/v2025.12.28-planes-readsb-prod-0",
+        "2025-12-29": "https://github.com/adsblol/globe_history_2025/releases/tag/v2025.12.29-planes-readsb-prod-0",
+        "2025-12-30": "https://github.com/adsblol/globe_history_2025/releases/tag/v2025.12.30-planes-readsb-prod-0"
+      },
       "days": [
+        [
+          "2025-12-28",
+          7845
+        ],
+        [
+          "2025-12-29",
+          8192
+        ],
         [
           "2025-12-30",
           8590
@@ -4692,9 +4728,21 @@
       "month": "2026-09",
       "file": "adsblol-2026-09.json",
       "license": "ODbL-1.0",
-      "sha256": "70991999383fba7eb33862e64859c60c195b05917a90c85eb0810fc3e9da0cc5",
-      "original": "https://github.com/adsblol/globe_history_2026/releases/tag/v2026.09.30-planes-readsb-prod-0",
+      "sha256": "fdf78b779876224ad0399b202b325112790fbaae549a0d65c61cda1643a11005",
+      "releases": {
+        "2026-09-28": "https://github.com/adsblol/globe_history_2026/releases/tag/v2026.09.28-planes-readsb-prod-0",
+        "2026-09-29": "https://github.com/adsblol/globe_history_2026/releases/tag/v2026.09.29-planes-readsb-prod-0",
+        "2026-09-30": "https://github.com/adsblol/globe_history_2026/releases/tag/v2026.09.30-planes-readsb-prod-0"
+      },
       "days": [
+        [
+          "2026-09-28",
+          14425
+        ],
+        [
+          "2026-09-29",
+          13706
+        ],
         [
           "2026-09-30",
           13631

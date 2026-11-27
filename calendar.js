@@ -93,7 +93,7 @@ const LoomCalendar = (() => {
       grid.replaceChildren(...elements);
       focused ??= grid.querySelector('button:enabled');
       if (focused) focused.tabIndex = 0;
-      status.textContent = `${covered} de ${count} días disponibles`;
+      status.textContent = (covered < count ? 'Cobertura parcial · ' : '') + `${covered} de ${count} días disponibles`;
       position();
       if (focusDay) focused?.focus({ preventScroll: true });
     }

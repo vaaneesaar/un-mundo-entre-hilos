@@ -33,13 +33,39 @@ python3 tools/adsb_routes.py /ruta/lote.tar AAAA-MM-DD --output /ruta/agregado.j
 
 El manifiesto `data/history.json` solo habilita los días que tienen totales positivos y verificados en sus agregados. El lector comprueba proveedor, días y sumas antes de usar un agregado; los periodos de semana, mes y año se construyen a partir de esos días. La cobertura anual y mensual de ADSB.lol sigue siendo parcial.
 
-## Lote validado y sus agregados
+## Fase 13.2 · Disponibilidad y lotes validados
 
-| Día UTC | Archivo de origen | GB de origen | Trazas | Trayectos | Rutas direccionales | Aeropuertos | Países |
+El inventario de lanzamientos `readsb-prod-0` encontró archivos para las 123 fechas de los cuatro meses objetivo. Los tamaños corresponden a la suma de todos los activos de cada lanzamiento, sin duplicar los días que figuran en dos repositorios.
+
+| Mes UTC | Días con archivo de origen | Volumen del mes (GB) | Días publicados |
+| --- | ---: | ---: | ---: |
+| 2023-12 | 31 | 50.45 | 3 de 31 · parcial |
+| 2024-12 | 31 | 65.09 | 3 de 31 · parcial |
+| 2025-12 | 31 | 95.63 | 3 de 31 · parcial |
+| 2026-09 | 30 | 116.50 | 3 de 30 · parcial |
+
+### Fechas habilitadas
+
+| Día UTC | Lanzamiento de origen | GB | Trazas auditadas | Trayectos | Rutas direccionales | Aeropuertos | Países |
 | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| 2023-12-30 | [v2023.12.30-planes-readsb-prod-0.tar](https://github.com/adsblol/globe_history_2023/releases/tag/v2023.12.30-planes-readsb-prod-0) | 1.58 | 42157 | 1817 | 728 | 161 | 18 |
-| 2024-12-30 | [v2024.12.30-planes-readsb-prod-0.tar](https://github.com/adsblol/globe_history_2024/releases/tag/v2024.12.30-planes-readsb-prod-0) (partes aa y ab) | 2.07 | 50717 | 3765 | 1264 | 246 | 27 |
-| 2025-12-30 | [v2025.12.30-planes-readsb-prod-0.tar](https://github.com/adsblol/globe_history_2025/releases/tag/v2025.12.30-planes-readsb-prod-0) (partes aa y ab) | 3.20 | 61220 | 8590 | 3391 | 454 | 39 |
-| 2026-09-30 | [v2026.09.30-planes-readsb-prod-0.tar](https://github.com/adsblol/globe_history_2026/releases/tag/v2026.09.30-planes-readsb-prod-0) (partes aa y ab) | 3.98 | 79645 | 13631 | 5406 | 604 | 48 |
+| 2023-12-28 | [readsb-prod-0](https://github.com/adsblol/globe_history_2023/releases/tag/v2023.12.28-planes-readsb-prod-0) | 1.69 | 44040 | 2361 | 800 | 170 | 19 |
+| 2023-12-29 | [readsb-prod-0](https://github.com/adsblol/globe_history_2023/releases/tag/v2023.12.29-planes-readsb-prod-0) | 1.71 | 45873 | 2266 | 783 | 170 | 19 |
+| 2023-12-30 | [readsb-prod-0](https://github.com/adsblol/globe_history_2023/releases/tag/v2023.12.30-planes-readsb-prod-0) | 1.58 | 42157 | 1817 | 728 | 161 | 18 |
+| 2024-12-28 | [readsb-prod-0](https://github.com/adsblol/globe_history_2024/releases/tag/v2024.12.28-planes-readsb-prod-0) | 1.95 | 44663 | 3526 | 1303 | 249 | 27 |
+| 2024-12-29 | [readsb-prod-0](https://github.com/adsblol/globe_history_2024/releases/tag/v2024.12.29-planes-readsb-prod-0) | 1.90 | 41853 | 3537 | 1230 | 229 | 24 |
+| 2024-12-30 | [readsb-prod-0](https://github.com/adsblol/globe_history_2024/releases/tag/v2024.12.30-planes-readsb-prod-0) | 2.07 | 50717 | 3765 | 1264 | 246 | 27 |
+| 2025-12-28 | [readsb-prod-0](https://github.com/adsblol/globe_history_2025/releases/tag/v2025.12.28-planes-readsb-prod-0) | 2.99 | 53510 | 7845 | 3177 | 423 | 41 |
+| 2025-12-29 | [readsb-prod-0](https://github.com/adsblol/globe_history_2025/releases/tag/v2025.12.29-planes-readsb-prod-0) | 2.95 | 53208 | 8192 | 3148 | 417 | 40 |
+| 2025-12-30 | [readsb-prod-0](https://github.com/adsblol/globe_history_2025/releases/tag/v2025.12.30-planes-readsb-prod-0) | 3.20 | 61220 | 8590 | 3391 | 454 | 39 |
+| 2026-09-28 | [readsb-prod-0](https://github.com/adsblol/globe_history_2026/releases/tag/v2026.09.28-planes-readsb-prod-0) | 3.91 | 74648 | 14425 | 5558 | 624 | 50 |
+| 2026-09-29 | [readsb-prod-0](https://github.com/adsblol/globe_history_2026/releases/tag/v2026.09.29-planes-readsb-prod-0) | 3.95 | 78333 | 13706 | 5381 | 614 | 49 |
+| 2026-09-30 | [readsb-prod-0](https://github.com/adsblol/globe_history_2026/releases/tag/v2026.09.30-planes-readsb-prod-0) | 3.98 | 79645 | 13631 | 5406 | 604 | 48 |
 
-Los meses de diciembre de 2023, 2024 y 2025 y septiembre de 2026 tienen **un día habilitado cada uno**. Los demás días no se publican. El manifiesto enlaza cada lanzamiento y registra el SHA-256 del JSON servido.
+Los periodos de semana, mes y año suman exclusivamente los días habilitados y cuentan cada par direccional una vez por periodo. El manifiesto conserva el enlace por fecha y el SHA-256 de cada JSON mensual. Los datos originales, más los registros detallados de exclusiones, quedan fuera del sitio público.
+
+Para incorporar más días a un mes, conserva en la misma caché el agregado diario `AAAA.MM.DD.json`, la auditoría `AAAA.MM.DD-audit.json` y los metadatos del lanzamiento oficial `AAAA.MM.DD-release.json`. Verifica el tamaño y cualquier SHA-256 publicado de los archivos originales antes de generar el agregado diario. Integra solo los días comprobados:
+
+```sh
+node tools/index_adsb.cjs /ruta/a/la/cache AAAA-MM-DD [AAAA-MM-DD ...]
+node --test *.test.cjs
+```

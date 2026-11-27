@@ -1423,7 +1423,18 @@ function initDemoFlights() {
     }));
     for (const file of source.historical ? dataset?.sourceFiles ?? [] : []) {
       const note = document.createElement('p');
-      note.textContent = file.sha256 ? `${file.original} · OPDI ${file.release} · SHA-256 ${file.sha256}` : `${file.original} · MD5 ${file.md5}`;
+      if (file.license === 'ODbL-1.0') {
+        const { start, end } = dataset.period;
+        const releases = file.releases ?? { [file.days[0][0]]: file.original };
+        note.textContent = `ADSB.lol · ${file.file} · ODbL 1.0 · SHA-256 ${file.sha256}`;
+        for (const [day, url] of Object.entries(releases)) {
+          if (day < start.slice(0, 10) || day >= end.slice(0, 10)) continue;
+          const link = document.createElement('a');
+          link.href = url;
+          link.textContent = day;
+          note.append(' · ', link);
+        }
+      } else note.textContent = `${file.original} · MD5 ${file.md5}`;
       provenance.append(note);
     }
     sourceStatus.textContent = isDemo() ? 'Simulación de datos de vuelos.'

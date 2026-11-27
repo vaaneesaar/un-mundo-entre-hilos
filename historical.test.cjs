@@ -94,16 +94,31 @@ test('ADSB.lol days use their own routes, geography and partial coverage', async
   assert.equal(additions.length, 4);
   assert(!source.dates.some(day => day.startsWith('2022')));
   for (const entry of additions) {
-    const [[day, expected]] = entry.days;
     const raw = fs.readFileSync(require.resolve('./data/' + entry.file));
+    const payload = JSON.parse(raw);
     assert.equal(createHash('sha256').update(raw).digest('hex'), entry.sha256);
-    assert.match(JSON.parse(raw).routes.authorization, /ODbL 1\.0/);
-    const result = await source.read(time.interval('day', day));
-    assert.equal(result.routeSource, 'adsblol:routes');
-    assert.equal(result.routes.reduce((sum, route) => sum + route.flightCount, 0), expected);
-    assert(result.routes.every(route => source.anchors[route.originId] && source.anchors[route.destinationId]));
-    const year = await source.read(time.interval('year', day));
-    assert.equal(year.routeSlots, 1);
-    assert(year.slots > year.routeSlots);
+    assert.match(payload.routes.authorization, /ODbL 1\.0/);
+    assert.deepEqual(Object.keys(entry.releases), entry.days.map(([day]) => day));
+    assert(entry.days.length > 1, entry.month);
+    for (const [day, expected] of entry.days) {
+      assert(entry.releases[day].endsWith('/v' + day.replaceAll('-', '.') + '-planes-readsb-prod-0'));
+      const result = await source.read(time.interval('day', day));
+      assert.equal(result.routeSource, 'adsblol:routes');
+      assert.equal(result.routes.reduce((sum, route) => sum + route.flightCount, 0), expected);
+      assert.equal(result.routes.length, payload.routes.daily[day].length);
+      assert(result.routes.every(route => source.anchors[route.originId] && source.anchors[route.destinationId]));
+    }
+    const volume = result => result.routes.reduce((sum, route) => sum + route.flightCount, 0);
+    const [[day]] = entry.days;
+    for (const type of ['week', 'month', 'year']) {
+      const period = time.interval(type, day);
+      const expected = source.timeline.filter(([date]) => date >= period.start.slice(0, 10) && date < period.end.slice(0, 10));
+      const result = await source.read(period);
+      assert.equal(result.routeSlots, expected.length, period.id);
+      assert.equal(volume(result), expected.reduce((sum, [, count]) => sum + count, 0), period.id);
+      const pairs = new Set(expected.flatMap(([date]) => payload.routes.daily[date].map(([a, b]) => a + b)));
+      assert.equal(result.routes.length, pairs.size, period.id);
+      assert(result.slots > result.routeSlots, period.id);
+    }
   }
 });
