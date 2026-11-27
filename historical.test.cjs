@@ -70,3 +70,9 @@ test('every integrated month agrees with its day index and has no world total', 
     assert.equal(result.routeSource, 'opensky:routes', entry.month);
   }
 });
+
+test('calendar availability keeps leap days and does not fill confirmed OpenSky gaps', () => {
+  const source = history.create(require('./data/history.json'), load, flights, time);
+  for (const day of ['2019-12-14', '2021-03-14', '2021-05-31']) assert(!source.dates.includes(day));
+  assert(source.dates.includes('2020-02-29'));
+});

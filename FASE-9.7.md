@@ -2,7 +2,7 @@
 
 ## Meses incorporados
 
-El catálogo pasó de 5 a 26 meses. Los 21 agregados nuevos ocupan 140.3 MB de JSON en disco. Los archivos originales verificados se guardan localmente.
+El catálogo pasó de 5 a 36 meses. Los 31 agregados nuevos ocupan 222.8 MB de JSON en disco. Los archivos originales verificados se guardan localmente.
 
 | Mes UTC | Vuelos | Países de salida / llegada | Aeropuertos | Rutas | Días | Original | MD5 de Zenodo |
 | --- | ---: | ---: | ---: | ---: | ---: | --- | --- |
@@ -27,17 +27,27 @@ El catálogo pasó de 5 a 26 meses. Los 21 agregados nuevos ocupan 140.3 MB de J
 | 2020-11 | 631 009 | 94 / 97 | 2 831 | 62 395 | 30 | `flightlist_20201101_20201130.csv.gz` | `c92cd09359bfab47a54dabc7973c4cdb` |
 | 2020-12 | 672 448 | 93 / 97 | 2 738 | 60 646 | 31 | `flightlist_20201201_20201231.csv.gz` | `d47748305c37044e2528891dce448269` |
 | 2021-01 | 628 302 | 93 / 98 | 2 754 | 58 332 | 31 | `flightlist_20210101_20210131.csv.gz` | `429a5c0fa19782decadfcf4d02747ebd` |
+| 2021-03 | 731 027 | 105 / 108 | 2 958 | 69 762 | 30 | `flightlist_20210301_20210331.csv.gz` | `eae428e5370beb47dd3d84166e83f76a` |
+| 2021-04 | 791 037 | 106 / 112 | 3 054 | 75 100 | 30 | `flightlist_20210401_20210430.csv.gz` | `2c17d25e2edf092f165ebd0e6715f39e` |
+| 2021-05 | 846 657 | 108 / 112 | 3 089 | 81 613 | 30 | `flightlist_20210501_20210530.csv.gz` | `67897c2cda58946ec447dc6793bbb7ba` |
+| 2021-06 | 973 968 | 106 / 110 | 3 156 | 91 537 | 30 | `flightlist_20210601_20210630.csv.gz` | `831f8080b0878fca89b482d1d42f7fe0` |
+| 2021-07 | 1 112 248 | 107 / 110 | 3 191 | 97 389 | 31 | `flightlist_20210701_20210731.csv.gz` | `1fffe4fa6cf8d5a902be397104febe6b` |
+| 2021-08 | 1 108 180 | 106 / 109 | 3 170 | 94 311 | 31 | `flightlist_20210801_20210831.csv.gz` | `cb65e6d18c548f51f1be1933d3272541` |
+| 2021-09 | 994 694 | 100 / 101 | 3 079 | 92 303 | 28 | `flightlist_20210901_20210930.csv.gz` | `0e85b9e78476b1f15417a5a9b0274bfd` |
+| 2021-10 | 1 089 759 | 98 / 106 | 3 082 | 95 007 | 31 | `flightlist_20211001_20211031.csv.gz` | `139c5964b45f2cec970fdfd87b780708` |
+| 2021-11 | 1 039 145 | 97 / 105 | 2 991 | 81 633 | 29 | `flightlist_20211101_20211130.csv.gz` | `a61288c51d851d5ca718abafac9661e3` |
+| 2021-12 | 1 077 558 | 95 / 100 | 2 939 | 76 468 | 31 | `flightlist_20211201_20211231.csv.gz` | `59cbfa425cd7e6d1d46c509adbe4ea1b` |
 
 - 2019 · 12 meses disponibles.
 - 2020 · 12 meses disponibles.
-- 2021 · Pendientes: 2021-03, 2021-04, 2021-05, 2021-06, 2021-07, 2021-08, 2021-09, 2021-10, 2021-11, 2021-12.
+- 2021 · 12 meses disponibles.
 - 2022 a septiembre de 2026 · OPDI, 57 meses publicados en la fuente, sin periodos habilitados en el sitio.
 
-Días sin observaciones válidas dentro de los meses incorporados: 2019-12-14.
+Días sin observaciones válidas dentro de los meses incorporados: 2019-12-14, 2021-03-14, 2021-05-31, 2021-09-04, 2021-09-29, 2021-11-23.
 
 ## Fuentes, alcance y reproducción
 
-El archivo original de diciembre de 2019 contiene cero filas con primera observación el 14 de diciembre; el calendario deshabilita ese día. Los doce meses de 2019 suman 11 428 841 vuelos observados en 364 de 365 días.
+Los originales no tienen primeras observaciones en los seis días enumerados arriba. El calendario deshabilita esos días. Los doce meses de 2019 suman 11 428 841 vuelos observados en 364 de 365 días. En 2020 se observaron 8 150 934 vuelos en 366 de 366 días y en 2021 se observaron 10 967 489 vuelos en 360 de 365 días. Los 36 JSON indexados ocupan 249,1 MB y los 36 originales locales ocupan 6,99 GB.
 
 La serie pública utiliza la [edición v21.12 de Zenodo](https://zenodo.org/records/5815448), DOI `10.5281/zenodo.5815448`, de Xavier Olive, Martin Strohmeier y Jannis Lübbe, The OpenSky Network, distribuida con [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Los datos se filtraron, deduplicaron y agregaron. El catálogo geográfico complementario procede de [OurAirports](https://ourairports.com/data/), que publica sus datos en el dominio público. SHA-256 de la copia usada: `b6ae8329691c9fc7b89d840e386fe65a9986e125c808cf885ae73e1ecb18aea8`.
 
