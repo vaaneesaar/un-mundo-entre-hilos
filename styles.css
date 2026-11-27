@@ -1227,16 +1227,13 @@ body:has(#cierre:not([hidden])) .method-footer summary { font-size: .75rem; }
 #loom-audio-control[data-enabled] .audio-muted { display: none; }
 .screen-audio { position: absolute; z-index: 4; inset: .35rem .35rem auto auto; }
 
-.intro-start { position: relative; }
+.intro-start { display: grid; justify-items: center; gap: .55rem; }
 .hand-start {
-  position: absolute;
-  top: calc(100% + .35rem);
-  left: 50%;
-  transform: translateX(-50%);
+  min-height: 2.5rem;
   background: #151a33;
-  border: 1px solid var(--line);
+  border: 1px solid #b5a2e39c;
   border-radius: 2rem;
-  padding: .35rem .8rem;
+  padding: .35rem 1rem;
   color: var(--ice);
   font: inherit;
   font-size: .78rem;
