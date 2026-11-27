@@ -1,0 +1,32 @@
+# Fase 9 · Fuentes aeronáuticas
+
+## Auditoría de acceso
+
+| Fuente | Indicador, alcance y disponibilidad | Acceso del proyecto |
+| --- | --- | --- |
+| [Flightradar24 · Estadísticas](https://www.flightradar24.com/data/statistics) | Series mundiales de vuelos rastreados totales y comerciales por día UTC. Son vuelos observados por la red. La página pública confirma las categorías, pero la revisión no estableció un calendario histórico exportable, frecuencia garantizada ni API autorizada para replicar esa serie. | Lectura pública de la página confirmada. Importación disponible con archivo autorizado. Sin archivo autorizado y sin extracción automatizada. |
+| [Flightradar24 API](https://fr24api.flightradar24.com/docs/endpoints/overview) | Posiciones, eventos, resúmenes con aeropuertos e IDs y recuentos de consultas de Flight Summary. Posiciones históricas desde mayo de 2016 según plan. Resúmenes desde junio de 2022 según plan. El recuento de una consulta no se equipara al gráfico mundial. | Pendiente de confirmar plan API, token Bearer, créditos, endpoint y permiso. El acceso al sitio normal no activa el API. Sandbox para pruebas, no fuente real. |
+| [OpenSky REST](https://openskynetwork.github.io/opensky-api/rest.html) | Estados ADS-B con cobertura variable y vuelos reconstruidos. Los aeropuertos pueden ser estimados o faltar. Posiciones con resolución documentada de 5 s autenticadas o 10 s anónimas. Eso no determina la granularidad de un total de vuelos. Algunos endpoints de vuelos se actualizan por lotes nocturnos. | Acceso operativo restringido. [Los términos](https://opensky-network.org/about/terms-of-use) requieren licencia escrita para integración REST operativa. OAuth2 client credentials, sin autenticación Basic. Consulta general de vuelos limitada a 2 h por solicitud y créditos por nivel y endpoint. |
+| [OpenSky histórico · Trino](https://openskynetwork.github.io/opensky-api/trino.html) | Estados desde 2013 y vuelos reconstruidos desde 2016 según la tabla. Cobertura según la red y el extracto autorizado. | Acceso pendiente. [OpenSky](https://opensky-network.org/data) describe acceso gratuito para instituciones elegibles, sujeto a aprobación. Se puede importar un extracto autorizado normalizado. |
+
+[Créditos, consultas y suscripciones FR24](https://fr24api.flightradar24.com/subscriptions-and-credits/). [Términos de FR24](https://www.flightradar24.com/terms-of-service). Su documentación de endpoints fija un máximo de 30 días de almacenamiento para datos API. Revisar los permisos específicos de redistribución y derivados antes de publicar. No se adquirieron suscripciones ni se realizaron llamadas operativas. Los endpoints no se prueban con credenciales de usuario inexistentes. EUROCONTROL no se utilizó como sustituto de un total mundial.
+
+## Uso e importación
+
+Sirve el directorio con `python3 -m http.server 8765 --bind 127.0.0.1` y abre `http://127.0.0.1:8765/#telar`. El modo inicial es **Datos reales**. Abre **Más filtros → Fuentes** para importar un archivo JSON autorizado o seleccionar explícitamente **Demostración**. El archivo se procesa localmente en memoria, no se envía ni se guarda en el navegador. El control valida estructura, URL oficial y metadatos declarados. Quien importa debe poder comprobar el permiso y la procedencia fuera de la aplicación. Utiliza una referencia de autorización apta para mostrar en pantalla, nunca una credencial ni un contrato privado.
+
+Contrato versión 1, sin cifras de ejemplo:
+
+- Objeto raíz con `version: 1` y `world`, `routes`, o ambos. Cada serie tiene `provider`, `url` oficial HTTPS, `authorization`, `definition`, `coverage`, `retrievedAt` ISO UTC y `records`.
+- `world` admite `provider: "fr24"` y una sola `category: "tracked"` o `"commercial"` por archivo. Cada registro lleva `dateUtc` YYYY-MM-DD, `recordId`, `flightCount` entero no negativo, `coverageStatus` (`complete` o `partial`) y opcionalmente `updatedAt` ISO UTC. Una revisión posterior sustituye el dato del mismo día. Una revisión ambigua se rechaza.
+- `routes` admite `provider: "opensky"` o `"fr24"`. Cada registro necesita `recordId` estable de vuelo, `departureUtc` ISO UTC y aeropuertos ICAO en `originId` y `destinationId`. Normaliza exportaciones autorizadas fuera de la aplicación antes de importarlas. Para OpenSky, documenta el criterio de reconstrucción y agrega el ID estable del vuelo reconstruido. Una dirección de transpondedor por sí sola identifica una aeronave, no un vuelo.
+- Los vuelos repetidos se cuentan una vez por ID dentro de la serie. Se asignan al día UTC por la salida. Los casos sin dos extremos distintos del catálogo se excluyen del tejido y se informa su número. La tarjeta identifica cobertura y aeropuertos estimados de OpenSky. La aplicación no usa posiciones para deducir vuelos.
+- El calendario destaca fechas con observaciones válidas, independientemente para la estadística o las rutas. Semana, mes y año reutilizan los intervalos de la fase 8. La comparación omite diferencias si una observación diaria está incompleta o falta una cifra. No se habilita Hora con este formato diario ni se simula En vivo.
+- La muestra de rutas nunca rellena el total mundial. El reparto existente agrupa proporcionalmente rutas en un presupuesto de hebras. La ficha indica cuántos vuelos de la ruta representa su hebra. A y B conservan el divisor y proyección compartidos.
+- La caché de intervalos es acotada y se invalida al cambiar de fuente. La importación está limitada a 16 MB y los extractos atribuidos a FR24 se excluyen tras 30 días desde la obtención, de forma conservadora. El modo demostración usa exclusivamente el catálogo sintético previo.
+
+## Integración operativa pendiente
+
+Confirmar por escrito los derechos de consulta y publicación de datos derivados y conseguir los archivos autorizados o credenciales. Si se habilita una conexión, configurarla solo en un backend con variables de entorno como `FR24_API_TOKEN` o `OPENSKY_CLIENT_ID` y `OPENSKY_CLIENT_SECRET`. No se implementó un túnel CORS ni un proxy activo. Ese backend deberá aplicar límites por plan, caché según licencia, expiración OAuth, tratamiento de 401/403/429 y disponibilidad, y devolver agregados sin exponer credenciales. La frecuencia de actualización y los días reales disponibles siguen sin confirmar hasta obtener una respuesta autorizada.
+
+Pruebas locales: `node --test *.test.cjs`. Los fixtures de proveedor son sintéticos y solo existen en pruebas.

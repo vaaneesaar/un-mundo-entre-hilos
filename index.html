@@ -1,0 +1,351 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101B35">
+  <title>Un mundo entre hilos</title>
+  <link rel="stylesheet" href="styles.css?v=layout962">
+  <script src="flights.js?v=international" defer></script>
+  <script src="destinations.js?v=country-filter" defer></script>
+  <script src="materials.js" defer></script>
+  <script src="embroidery.js?v=layout962" defer></script>
+  <script src="needle.js?v=layout962" defer></script>
+  <script src="interpretations.js?v=layout962" defer></script>
+  <script src="loom.js?v=international" defer></script>
+  <script src="calendar.js?v=layout962" defer></script>
+  <script src="temporal.js" defer></script>
+  <script src="providers.js?v=layout962" defer></script>
+  <script src="historical.js" defer></script>
+  <script src="script.js?v=layout962" defer></script>
+</head>
+<body>
+  <header class="site-header">
+    <a class="wordmark" href="#inicio"><span class="mark" aria-hidden="true">✳</span> Un mundo entre hilos</a>
+    <nav aria-label="Pantallas">
+      <a href="#inicio" aria-current="step">Inicio</a>
+      <a href="#telar">Telar</a>
+      <a href="#cierre">Cierre</a>
+    </nav>
+    <label class="site-language">Idioma <select aria-label="Idioma"><option>Español</option></select></label>
+  </header>
+
+  <main>
+    <section id="inicio" class="screen intro" aria-labelledby="intro-title">
+      <div class="intro-art" data-textile="curtain" aria-hidden="true"></div>
+      <div class="intro-copy intro-card" id="intro-card">
+        <p class="eyebrow">Explicación de la interfaz</p>
+        <h1 id="intro-title" tabindex="-1">Un mundo<br> <em>entre hilos</em></h1>
+        <p class="lead">Todo vínculo comienza con un movimiento.</p>
+        <p>Los vuelos observados se convierten en hilos. Explora un lugar y una fecha para descubrir cómo sus conexiones forman un tejido compartido.</p>
+        <a class="button primary" id="begin" href="#telar">Comenzar a tejer</a>
+      </div>
+      <button class="intro-thread" type="button" aria-label="Deslizar el primer hilo para comenzar" title="Desliza el hilo para comenzar"><span aria-hidden="true"></span></button>
+      <p class="intro-note">El mundo como un telar de vínculos</p>
+    </section>
+
+    <section id="telar" class="screen loom" aria-labelledby="loom-title" hidden>
+      <h1 class="loom-sr-only" id="loom-title" tabindex="-1">Telar interactivo</h1>
+      <div class="loom-filter-bar" aria-label="Filtros del telar" role="group">
+        <div class="destination-search" id="destination-search">
+          <label for="destination-input">Explorar lugar</label>
+          <div class="destination-field">
+            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+              <circle cx="10.5" cy="10.5" r="5.5"></circle><path d="m15 15 4 4"></path>
+            </svg>
+            <input id="destination-input" type="text" role="combobox" aria-autocomplete="list"
+              aria-expanded="false" aria-controls="destination-options" autocomplete="off"
+              placeholder="País, ciudad o aeropuerto" enterkeyhint="search">
+            <button type="button" data-destination-clear aria-label="Borrar búsqueda" hidden>×</button>
+          </div>
+          <button class="button secondary place-toggle" id="place-toggle" type="button" popovertarget="place-panel" aria-controls="place-panel" aria-expanded="false">País y sentido</button>
+          <ul id="destination-options" role="listbox" aria-label="Sugerencias de destinos" hidden></ul>
+          <p class="destination-search-status" role="status"></p>
+        </div>
+        <div class="loom-date-field">
+          <span id="demo-date-label">Fecha de demostración (UTC)</span>
+          <button class="calendar-trigger" id="demo-date" type="button" popovertarget="demo-calendar"
+            aria-haspopup="dialog" aria-expanded="false" aria-labelledby="demo-date-label demo-date-value" disabled>
+            <span id="demo-date-value" data-date-value>Elegir fecha</span><span aria-hidden="true">▦</span>
+          </button>
+          <div class="loom-calendar" id="demo-calendar" popover="auto" role="dialog" aria-labelledby="demo-calendar-month">
+            <div class="calendar-month-bar">
+              <button type="button" aria-label="Mes anterior" data-calendar-prev>‹</button>
+              <strong id="demo-calendar-month" data-calendar-month aria-live="polite"></strong>
+              <button type="button" aria-label="Mes siguiente" data-calendar-next>›</button>
+            </div>
+            <form class="calendar-year">
+              <label for="demo-calendar-year">Año</label>
+              <select id="demo-calendar-year"></select>
+              <select data-calendar-month-select aria-label="Mes"></select>
+            </form>
+            <div class="calendar-week" aria-hidden="true">
+              <span>Lun</span><span>Mar</span><span>Mié</span><span>Jue</span><span>Vie</span><span>Sáb</span><span>Dom</span>
+            </div>
+            <div class="calendar-days" data-calendar-days role="group" aria-label="Días del mes"></div>
+            <p data-calendar-status role="status"></p>
+            <small>Selecciona uno de los días destacados.</small>
+          </div>
+        </div>
+        <label class="loom-filter period-control" for="loom-period">
+          <span>Periodo</span>
+          <select id="loom-period" aria-describedby="temporal-note">
+            <option value="hour" disabled>Hora · Sin datos</option><option value="day" selected>Día</option>
+            <option value="week">Semana</option><option value="month">Mes</option><option value="year">Año</option>
+            
+          </select>
+        </label>
+        <label class="loom-filter" id="period-hour-field" hidden><span>Hora A (UTC)</span><select id="period-hour"></select></label>
+        <div class="toolbar-actions">
+        <button class="button secondary compare-toggle" id="compare-toggle" type="button" aria-pressed="false" aria-controls="loom-comparison">Comparar</button>
+        <button class="button secondary" id="emotion-toggle" type="button" popovertarget="emotion-panel" aria-controls="emotion-panel" aria-expanded="false">Emociones</button>
+        <button class="button secondary loom-more" id="loom-more" type="button" popovertarget="loom-controls"
+          aria-haspopup="dialog" aria-expanded="false" aria-controls="loom-controls">
+          <svg aria-hidden="true" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4">
+            <path d="M2 5h16M2 10h16M2 15h16"></path><path d="M6 3v4m7 1v4m-5 1v4" stroke-width="3"></path>
+          </svg>
+          Ajustes
+        </button>
+        </div>
+      </div>
+      <div class="toolbar-popover" id="place-panel" popover="auto" aria-label="País y tipo de conexión">
+        <label class="loom-filter country-filter"><span>País</span>
+          <select id="flight-country" aria-label="País">
+            <option value="">Todos los países</option>
+          </select>
+        </label>
+            <label class="loom-density" id="destination-direction-field">Tipo de conexión
+              <select id="destination-direction">
+                <option value="both">Llegadas y salidas</option>
+                <option value="arrivals">Vuelos que llegan aquí</option>
+                <option value="departures">Vuelos que salen de aquí</option>
+              </select>
+            </label>
+      </div>
+      <aside class="control-panel loom-filter-popover" id="loom-controls" popover="auto"
+        aria-labelledby="loom-controls-title" role="dialog">
+        <div class="loom-filter-heading">
+          <h2 id="loom-controls-title">Ajustes</h2>
+          <button class="button secondary" id="loom-controls-close" type="button"
+            popovertarget="loom-controls" popovertargetaction="hide">Cerrar</button>
+        </div>
+        <div class="loom-filter-content">
+        <div class="loom-main-modes" id="loom-main-modes">
+          <label class="loom-filter" id="filter-visualization" for="loom-visualization">
+            <span>Visualización</span>
+            <select id="loom-visualization" aria-describedby="visualization-note" disabled>
+              <option value="connections">Conexiones</option><option value="figure" disabled>Figura bordada</option>
+            </select>
+          </label>
+        </div>
+
+          <label class="advanced-origin">Cruzar con país de origen <select id="flight-origin"><option value="">Todos los países</option></select></label>
+          <div class="destination-layers">
+        <label class="loom-filter"><span>Visibilidad del tejido</span>
+          <select id="destination-layer">
+            <option value="all">Mostrar todos los hilos</option>
+            <option value="highlight" disabled>Destacar destino</option>
+            <option value="isolate" disabled>Solo el destino</option>
+          </select>
+        </label>
+
+            <button class="button secondary" id="destination-restore" type="button" hidden>Restaurar vista mundial</button>
+          </div>
+          <div class="loom-demo-controls">
+            <label class="loom-density">Escenario de demostración
+              <select id="demo-activity" disabled>
+                <option value="low">Actividad baja</option>
+                <option value="medium" selected>Actividad media</option>
+                <option value="high">Actividad alta</option>
+              </select>
+            </label>
+            <p id="demo-route-coverage">Muestra sintética de rutas con cobertura independiente del total mundial.</p>
+          </div>
+          <div class="controls interpretation-controls">
+            <details class="interpretation-group" hidden>
+              <summary>Motivos de viaje</summary>
+              <p>Distribución complementaria sobre personas viajeras.</p>
+              <p id="survey-empty" role="status">No hay estadísticas de motivos disponibles para esta selección.</p>
+              <div id="survey-card" hidden>
+                <strong id="survey-title"></strong>
+                <p id="survey-coverage"></p>
+                <label for="survey-category">Motivo de viaje</label>
+                <select id="survey-category"></select>
+                <output id="survey-value" for="survey-category" aria-live="polite"></output>
+                <small id="survey-method"></small>
+              </div>
+            </details>
+          </div>
+          <fieldset class="source-mode">
+            <legend>Fuentes</legend>
+            <label class="loom-filter">Modo de datos
+              <select id="flight-mode">
+                <option value="real">Datos reales</option>
+                <option value="demo">Demostración</option>
+              </select>
+            </label>
+            <label for="flight-import">Importar archivo JSON autorizado</label>
+            <input id="flight-import" type="file" accept=".json,application/json" aria-describedby="flight-source-status">
+            <p id="flight-source-status" role="status"></p>
+            <div id="flight-provenance"></div>
+          </fieldset>
+        </div>
+      </aside>
+      <aside class="toolbar-popover emotion-panel" id="emotion-panel" popover="auto" aria-label="Emociones">
+        <div id="emotion-options"></div>
+        <small>Interpretación artística de los vuelos observados.</small>
+      </aside>
+      <div class="comparison-controls" id="loom-comparison" hidden>
+        <div class="comparison-toolbar">
+          <div class="comparison-summary">
+            <p id="comparison-difference" aria-live="polite"></p>
+            <p class="comparison-source"><span id="comparison-source-name"></span><span id="comparison-scale"></span></p>
+          </div>
+          <div class="comparison-b-control">
+            
+            <label id="comparison-hour-field" hidden>Hora B (UTC) <select id="comparison-hour"></select></label>
+            <button type="button" class="button secondary" id="comparison-switch">Mostrar periodo B</button>
+          </div>
+          <div id="comparison-actions"></div>
+        </div>
+        <div class="comparison-periods">
+          <section class="comparison-period" id="comparison-a">
+            <h2>Periodo A</h2><label>Fecha A (UTC) <select id="comparison-day-a"></select></label>
+            <p data-period-date></p>
+            <p class="comparison-value"><strong data-period-value>—</strong> <span data-period-unit></span></p>
+            <p data-period-coverage></p>
+            <p data-period-destination hidden></p>
+          </section>
+          <section class="comparison-period" id="comparison-b">
+            <h2>Periodo B</h2><label>Fecha B (UTC) <select id="comparison-day"></select></label>
+            <p data-period-date></p>
+            <p class="comparison-value"><strong data-period-value>—</strong> <span data-period-unit></span></p>
+            <p data-period-coverage></p>
+            <p data-period-destination hidden></p>
+          </section>
+        </div>
+      </div>
+      <figure class="loom-stage">
+        <div class="loom-actions">
+          <button class="button secondary loom-reset" type="button" id="loom-reset" disabled>Restablecer hilos</button>
+          <button class="button secondary loom-pause" type="button" id="loom-pause"
+            aria-label="Pausar animación" title="Pausar animación" aria-keyshortcuts="Space" disabled>
+            <svg aria-hidden="true" viewBox="0 0 20 20" fill="currentColor">
+              <path d="M5 4h3v12H5zm7 0h3v12h-3z"></path>
+            </svg>
+            <svg aria-hidden="true" viewBox="0 0 20 20" fill="currentColor" hidden>
+              <path d="M6 3.5v13l11-6.5z"></path>
+            </svg>
+          </button>
+        </div>
+        <div class="loom-metric">
+          <div class="loom-sample-metric" id="loom-sample-metric" hidden>
+            <p><strong>—</strong> <span data-sample-label>Vuelos observados</span></p>
+            <p data-sample-source></p>
+            <span data-sample-detail></span>
+            <span data-sample-change></span>
+            <div id="loom-sample-series" role="group" aria-label="Vuelos de la muestra por fecha UTC" hidden></div>
+          </div>
+        <details class="destination-context" id="destination-context" hidden>
+          <summary id="destination-name"></summary>
+          <div class="destination-details" aria-live="polite">
+            <p id="destination-type"></p>
+            <p id="destination-period"></p>
+            <p class="destination-tally" id="destination-count"></p>
+            <p id="destination-coverage"></p>
+            <p id="destination-airports"></p>
+            <label class="loom-filter" id="country-places-field" hidden>Ciudad o aeropuerto
+              <select id="country-places"></select>
+            </label>
+            <p id="destination-origins" hidden></p>
+            <p id="embroidery-description-compact" hidden></p>
+          </div>
+        </details>
+          <small id="emotion-disclosure" role="status" hidden></small>
+        </div>
+        <div class="loom-art" id="loom-art-a">
+          <canvas tabindex="0" aria-label="Telar interactivo. Acerca la aguja a una hebra y arrastra para tensarla." hidden></canvas>
+          <span class="needle-cursor" aria-hidden="true" hidden></span>
+          <aside class="thread-info" aria-label="Ficha de la hebra" aria-live="polite" hidden>
+            <small data-thread-label>Ficha de la hebra</small>
+            <strong data-thread-type></strong>
+            <div class="thread-route" data-thread-route hidden>
+              <span data-thread-origin></span>
+              <span data-thread-destination></span>
+              <span data-thread-date></span>
+              <span data-thread-count></span>
+              <span data-thread-distance></span>
+              <span data-thread-source></span>
+            </div>
+            <span data-thread-symbol hidden>Representación simbólica del destino</span>
+            <small class="thread-emotion">Interpretación artística · <span></span></small>
+            <span data-thread-state></span>
+          </aside>
+          <div class="loom-fallback" data-textile="loom" hidden></div>
+        </div>
+        <div class="loom-empty" id="loom-real-empty" hidden>
+          <p role="status">Todavía no hay vuelos reales cargados. Importa un conjunto autorizado o explora la demostración.</p>
+          <button class="button primary" id="loom-show-demo" type="button">Ver demostración</button>
+        </div>
+        <a class="button secondary loom-next" href="#cierre">Descubrir lo que nos une</a>
+        <figcaption class="loom-caption">
+          <span id="loom-status" class="loom-sr-only">Telar · Simulación visual</span>
+          <span id="visualization-note" class="loom-sr-only">Selecciona un destino para descubrir su figura bordada.</span>
+          <div id="embroidery-caption" hidden>
+            <strong id="embroidery-name"></strong>
+            <span id="embroidery-count"></span>
+            <span id="embroidery-description"></span>
+          </div>
+        </figcaption>
+      </figure>
+    </section>
+
+    <section id="cierre" class="screen ending" aria-labelledby="ending-title" hidden>
+      <div class="ending-copy">
+        <p class="eyebrow">Resumen del proceso</p>
+        <h1 id="ending-title" tabindex="-1">No todas las distancias se miden <em>en kilómetros.</em></h1>
+        <div class="process">
+          <section>
+            <h2>Del dato al tejido</h2>
+            <p>El proyecto parte de la cantidad de vuelos diarios y de los recorridos del tráfico aéreo mundial. Esta información se transforma en hilos, conexiones y relieves que permiten observar patrones de movimiento de una manera distinta.</p>
+          </section>
+          <section>
+            <h2>Un telar de vínculos</h2>
+            <p>El telar representa cómo los movimientos individuales pueden formar parte de una estructura colectiva. Cada hilo se relaciona con otros y construye una composición que cambia constantemente.</p>
+          </section>
+          <section>
+            <h2>Más allá de las cifras</h2>
+            <p>El diseño permite transformar información compleja en una experiencia visual e interactiva. Al explorar los datos mediante un tejido, se propone una reflexión sobre las conexiones humanas que pueden existir detrás de cada desplazamiento, sin afirmar que conocemos las emociones de cada pasajero.</p>
+          </section>
+        </div>
+        <blockquote>El mundo parece un bordado de distancias y afectos.</blockquote>
+        <div class="ending-actions">
+          <a class="button primary" href="#telar">Volver al telar</a>
+          <a class="button secondary" href="#inicio">Comenzar de nuevo</a>
+        </div>
+      </div>
+      <div class="ending-art" data-textile="weave" aria-hidden="true"></div>
+      <p class="ending-note">Más allá del movimiento</p>
+    </section>
+    <footer class="method-footer" id="method-footer" hidden>
+      <details><summary>Fuentes, metodología y créditos</summary>
+        <p><a href="https://zenodo.org/records/5815448">OpenSky Network · CC BY 4.0</a> aporta vuelos reconstruidos. La fecha corresponde a la primera observación UTC. <a href="https://ourairports.com/data/">OurAirports</a> aporta el catálogo geográfico.</p>
+        <p>Contamos observaciones con origen y destino utilizables. Los días disponibles indican cobertura temporal de la muestra. Las rutas visibles son una selección limitada por el presupuesto gráfico.</p>
+          <div class="loom-tally">
+            <strong id="demo-world-total" aria-describedby="demo-world-note demo-world-meta">—</strong>
+            <div>
+              <p id="demo-world-label">Cantidad de vuelos diarios registrados</p>
+              <span id="demo-world-note">Simulación de datos de vuelos · Total mundial independiente</span>
+              <span id="demo-world-meta" aria-live="polite"></span>
+              <span id="temporal-note"></span>
+            </div>
+          </div>
+        <div class="history-controls" id="history-controls" hidden>
+          <p id="history-coverage" role="status"></p>
+        </div>
+        <p>Diseño y visualización textil · Un mundo entre hilos.</p>
+      </details>
+    </footer>
+  </main>
+</body>
+</html>
