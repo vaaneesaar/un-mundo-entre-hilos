@@ -119,7 +119,7 @@ const TextileLoom = (() => {
     return { fibers, omitted: allocation.omitted.length };
   }
 
-  const bandColors = ['#70CBFF', '#DCDFFF', '#FA91BB', '#84A9FF', '#AC8EF8', '#FF938A', '#59D1F2', '#E96DAD'];
+  const bandColors = ['#70CBFF', '#DCDFFF', '#FF75B0', '#84A9FF', '#AC8EF8', '#FF985F', '#59D1F2', '#E96DAD'];
   // Each path has a distinct silhouette and travels between foreground and background.
   const drapes = [
     [[1.48,1.78,.88,.28,.98,1.62,1.51], [-.54,-.64,.11,.63,-.28,-.35,.12]],
@@ -226,12 +226,12 @@ const TextileLoom = (() => {
       const warm = rgb('#F461AA'), cool = rgb('#64C4FF');
       const pigment = rgb(bandColors[lane]).map((channel, index) =>
         lerp(channel, lerp(warm[index], cool[index], (1 + east) / 2),
-          international * .40) * (.78 + .22 * strength));
+          international * .40) * (.91 + .09 * strength));
       const color = '#' + pigment.map(channel => Math.round(channel * 255).toString(16).padStart(2, '0')).join('');
       return {
         id, group: id, system: 'weft', corridor: { lane, matched, flightCount, routes, gathers },
         material: { lane, concentration, connectivity, distance },
-        phase, tension: strength, radius: .012 + .023 * strength, strength, steps: 72, color,
+        phase, tension: strength, radius: .018 + .027 * strength, strength, steps: 72, color,
         sample(t) {
           const lift = Math.sin(t * Math.PI);
           // These are textile coordinates, not a geographic projection.
@@ -344,7 +344,7 @@ const TextileLoom = (() => {
         const gather = fiber.corridor ? Math.max(0, drapeAt(fiber.corridor.gathers, t)) : 0;
         // Adapt the closing textiles' irregular hems, local gathering and
         // cloth dome to the existing panoramic band surfaces.
-        const widthAt = fiber.corridor ? (.62 + .42 * Math.sin(t * Math.PI) + .23 * Math.sin(t * 14 + fiber.phase))
+        const widthAt = fiber.corridor ? (.65 + .39 * Math.sin(t * Math.PI) + .27 * Math.sin(t * 14 + fiber.phase) + .09 * Math.sin(t * 27 + fiber.phase))
           * (.52 + .48 * Math.min(1, Math.min(t, 1 - t) * 8)) * (1 - .20 * gather) : 1;
         const texture = .96 + .07 * Math.sin(t * 74 + fiber.phase) + .05 * Math.sin(t * 38);
         for (const [partIndex, part] of surface.parts.entries()) {
@@ -365,7 +365,7 @@ const TextileLoom = (() => {
                 + .045 * Math.cos(t * 173 + edge * 7)) * edge ** 2 : 1;
             const acrossDistance = (sideOffset + (part.gauze ? radius * edge * fray : 0)) * widthAt;
             const fold = part.fold ? part.fold * Math.sin(t * 85) * radius * .68 : 0;
-            const depth = depthOffset + (part.gauze ? (1 - edge ** 2) * radius * (.54 + .33 * Math.sin(t * 12 + fiber.phase) + .32 * gather) + edge * fold : 0);
+            const depth = depthOffset + (part.gauze ? (1 - edge ** 2) * radius * (.75 + .46 * Math.sin(t * 12 + fiber.phase) + .38 * gather) + edge * fold : 0);
             const point = centers[i].map((n, k) =>
               n + (part.gauze ? 0 : radius * surfaceNormal[k]) + across[k] * acrossDistance + normal[k] * depth);
             vertices.set([...point, ...surfaceNormal, ...colors[partIndex],
@@ -564,10 +564,10 @@ const TextileLoom = (() => {
       if (gauze || ribbon || fold) {
         // A flattened shell carries the woven surface. Its UVs, picking and pull use the same buffer.
         float u = vYarn.y;
-        float warpCount = mix(5.0, 36.0, vTension) * (ribbon ? 1.25 : 1.0);
+        float warpCount = mix(10.0, 42.0, vTension) * (ribbon ? 1.25 : 1.0);
         float across = u * warpCount + .24 * sin(vYarn.x * 28.0 + threadPhase)
           + .17 * sin(vYarn.x * 104.0 + u * 8.0 + threadPhase);
-        float along = vYarn.x * (mix(34.0, 195.0, vTension) + 14.0 * sin(threadPhase * .37)) + .35 * sin(u * 6.2 + threadPhase + vYarn.x * 12.0)
+        float along = vYarn.x * (mix(53.0, 213.0, vTension) + 14.0 * sin(threadPhase * .37)) + .35 * sin(u * 6.2 + threadPhase + vYarn.x * 12.0)
           + .23 * cos(u * 27.0 + vYarn.x * 37.0 + threadPhase);
         float longitudinal = 1.0 - smoothstep(.025, .25, abs(fract(across) - .5) * (1.0 + gestures.x * .38 - gestures.y * .20));
         float transverse = 1.0 - smoothstep(.015, .20, abs(fract(along) - .5) * (1.0 + gestures.x * .68 + gestures.z * .45 - gestures.w * .33 * join));
@@ -577,9 +577,11 @@ const TextileLoom = (() => {
         float pearl = 1.0 - step(.9, mod(floor(across + .5), 5.0));
         clothEdge = pearl * longitudinal;
         clothEdge = .20 * clothEdge + .80 * smoothstep(.38, .50, abs(u - .5));
-        float filament = ribbon ? .17 + .67 * longitudinal + .11 * transverse : .027 + .68 * cloth;
-        coverage *= (filament + clothEdge * .105) * (.83 + .17 * sin(across * 3.14159 + along * 3.14159));
-        coverage *= mix(.55, 1.06, vTension);
+        float voile = ribbon ? .20 : .12;
+        float filament = voile + (ribbon ? .62 * longitudinal + .22 * transverse : .71 * cloth);
+        float depthLight = mix(.76, 1.16, smoothstep(-.8, .9, vDepth));
+        coverage *= (filament + clothEdge * .18) * (.89 + .11 * sin(across * 3.14159 + along * 3.14159));
+        coverage *= mix(.86, 1.14, vTension) * depthLight;
         if (fold) coverage *= .73;
         coverage *= 1.0 + gestures.y * .20 * longitudinal + gestures.z * .17 * clothEdge
           + gestures.w * .24 * join;
@@ -618,7 +620,7 @@ const TextileLoom = (() => {
       pigment += (1.0 - vWarp) * radiance * (vColor * backlight * (.11 + open * .22)
         + vec3(.68, .79, 1.0) * glint * (.045 + satin * .09));
       pigment += (gauze || ribbon || fold ? 1.0 : 0.0) * vColor *
-        (.12 * clothEdge + .12 * warm + .08 * sheen) * radiance;
+        (.28 * clothEdge + .19 * warm + .14 * sheen + .08 * vTension) * radiance;
       coverage *= 1.0 - open * (.22 - .11 * backlight);
       pigment *= 1.0 - .16 * gestures.x;
       pigment += vec3(1.0, .74, .43) *

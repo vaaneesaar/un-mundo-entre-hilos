@@ -18,29 +18,26 @@ const LoomMaterials = (() => {
       const { lane, concentration, connectivity, distance } = kind;
       const styles = [
         { width: .34, code: 5 }, { width: .24, code: 6 },
-        { width: .14, code: 5, cord: [.14, .80] }, { width: .34, code: 5 },
-        { width: .21, code: 6, cord: [.24, .76] }, { width: .31, code: 5 },
-        { width: .10, code: 5, cord: [.21, .73] }, { width: .25, code: 6 }
+        { width: .14, code: 5, cord: [.22, .59] }, { width: .34, code: 5 },
+        { width: .21, code: 6, cord: [.37, .68] }, { width: .31, code: 5 },
+        { width: .10, code: 5, cord: [.23, .53] }, { width: .25, code: 6 }
       ];
       const style = styles[lane];
-      const width = style.width * (.13 + 1.75 * strength ** 1.6 + .23 * connectivity);
-      if (strength < .22) {
-        return { kind: 'corridor', code: 7, steps: 64,
-          parts: [part(0, 0, radius, 1), { ...part(radius * 2, -.02, radius * .45, .73), loose: true, hem: true }] };
-      }
+      // Even a sparse real corridor retains a translucent woven surface.
+      const width = (.15 + style.width * .82) * (.62 + 1.42 * strength + .16 * connectivity);
       const code = (strength > .70 && lane % 3 !== 0) || (concentration > .09 && strength > .39) ? 6 : style.code;
       const parts = [{ ...part(0, 0, width, 1), gauze: true, code }];
       const patch = [.20 + .05 * (lane % 4), .60 + .075 * (lane % 3)];
-      if (strength > .54 && (lane % 2 === 0 || distance > .19)) {
-        parts.push({ ...part(width * .18, .105, width * .68, .93), gauze: true, code: 6, window: patch });
+      if (strength > .34 && (lane % 2 === 0 || distance > .19 || strength > .63)) {
+        parts.push({ ...part(width * .39, .19, width * .62, .79), gauze: true, code: 5, window: patch });
       }
       for (const edge of [-1, 1]) {
-        parts.push({ ...part(width * edge * 1.01, .008, radius * .23, .94), code: 7, hem: true });
+        parts.push({ ...part(width * edge * 1.01, .008, radius * .35, 1.04), code: 7, hem: true });
       }
       if (lod >= .8 || lane % 2 === 0) {
         parts.push({ ...part(width * .68, -.065, radius * .27, 1.1), code: 7, hem: true, loose: true });
       }
-      if (style.cord && strength > .35) {
+      if (style.cord && strength > .45) {
         const plyRadius = .013 + .014 * strength + .008 * concentration;
         for (let ply = 0; ply < 3; ply++) {
           parts.push({ ...part(plyRadius * 1.06, plyRadius * 1.18, plyRadius * 1.15, [.80, 1.01, 1.16][ply], 19, tau * ply / 3),
